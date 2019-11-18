@@ -42,14 +42,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             uploadMetric = upgradeMap[uploadMetric] ?? "B"
         }
         if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%.2f", uploadSpeed)) \(appendMap[uploadMetric] ?? "??")/s U\n\(String(format: "%.2f", downloadSpeed)) \(appendMap[downloadMetric] ?? "??")/s D", attributes: textAttributes)
+            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%.f", uploadSpeed)) \(appendMap[uploadMetric] ?? "??")/s ↑\n\(String(format: "%.f", downloadSpeed)) \(appendMap[downloadMetric] ?? "??")/s ↓", attributes: textAttributes)
         }
     }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         statusItem.length = 75
         if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n0.00 KB/s U\n0.00 KB/s D", attributes: textAttributes)
+            button.attributedTitle = NSAttributedString(string: "\n0 B/s ↑\n0 B/s ↓", attributes: textAttributes)
         }
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Start", action: #selector(AppDelegate.runTimer(_:)), keyEquivalent: "S"))
