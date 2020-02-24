@@ -11,110 +11,127 @@ import Cocoa
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
 
-    var appendMap: [String: String] = ["B": " B", "K": "KB", "M": "MB"]
-    var upgradeMap: [String: String] = ["B": "K", "K": "M"]
+    @IBOutlet var menu: NSMenu!
+    @IBOutlet var quitMenuItem: NSMenuItem!
+    @IBOutlet var item1: NSMenuItem!
+    @IBOutlet var item2: NSMenuItem!
+    @IBOutlet var item3: NSMenuItem!
+    @IBOutlet var item4: NSMenuItem!
+    @IBOutlet var item5: NSMenuItem!
+    @IBOutlet var item6: NSMenuItem!
+    @IBOutlet var item7: NSMenuItem!
+    @IBOutlet var item8: NSMenuItem!
+    @IBOutlet var item9: NSMenuItem!
+    @IBOutlet var item10: NSMenuItem!
+    
+    lazy var menuItems: [NSMenuItem] = [
+        item1, item2, item3, item4, item5, item6, item7, item8, item9, item10
+    ]
+    
+    var processSpeeds: [(name: String, download: Double, upload: Double)] = []
+    
     var uploadSpeed: Double = 0.0
     var downloadSpeed: Double = 0.0
-    var uploadMetric: String = ""
-    var downloadMetric: String = ""
+    var uploadMetric: String = "KB"
+    var downloadMetric: String = "KB"
     var statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    
     var timer: Timer!
     
-    var textAttributes : [NSAttributedString.Key : Any] {
+    var statusBarTextAttributes : [NSAttributedString.Key : Any] {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.maximumLineHeight = 10
-        paragraphStyle.paragraphSpacing = -7
+        paragraphStyle.paragraphSpacing = -9
         paragraphStyle.alignment = .right
         return [
-            NSAttributedString.Key.font : NSFont.systemFont(ofSize: 9),
+            NSAttributedString.Key.font : NSFont.monospacedDigitSystemFont(ofSize: 9, weight: NSFont.Weight.regular),
+            NSAttributedString.Key.paragraphStyle: paragraphStyle
+        ] as [NSAttributedString.Key : Any]
+    }
+    var menuItemTextAttributes: [NSAttributedString.Key : Any] {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .right
+        return [
+            NSAttributedString.Key.font : NSFont.monospacedDigitSystemFont(ofSize: 12, weight: NSFont.Weight.regular),
             NSAttributedString.Key.paragraphStyle: paragraphStyle
         ] as [NSAttributedString.Key : Any]
     }
     
     func updateSpeed() {
-        while (downloadSpeed > 1024.0) {
-            downloadSpeed = downloadSpeed / 1024.0
-            downloadMetric = upgradeMap[downloadMetric] ?? "B"
+        downloadSpeed = 0.0
+        uploadSpeed = 0.0
+        for speed in processSpeeds {
+            downloadSpeed += speed.download
+            uploadSpeed += speed.upload
         }
-        while (uploadSpeed > 1024.0) {
-            uploadSpeed = uploadSpeed / 1024.0
-            uploadMetric = upgradeMap[uploadMetric] ?? "B"
+        downloadMetric = "KB"
+        if (downloadSpeed > 1024.0) {
+            downloadSpeed /= 1024.0
+            downloadMetric = "MB"
         }
+        uploadMetric = "KB"
+        if (uploadSpeed > 1024.0) {
+            uploadSpeed /= 1024.0
+            uploadMetric = "MB"
+        }
+        
         if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%.f", uploadSpeed)) \(appendMap[uploadMetric] ?? "??")/s ↑\n\(String(format: "%.f", downloadSpeed)) \(appendMap[downloadMetric] ?? "??")/s ↓", attributes: textAttributes)
+            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", uploadSpeed)) \(uploadMetric)/s ↑\n\(String(format: "%7.2lf", downloadSpeed)) \(downloadMetric)/s ↓", attributes: statusBarTextAttributes)
+        }
+        for i in 0..<menuItems.count {
+            downloadMetric = "KB"
+            if (processSpeeds[i].download > 1024.0) {
+                processSpeeds[i].download /= 1024.0
+                downloadMetric = "MB"
+            }
+            uploadMetric = "KB"
+            if (processSpeeds[i].upload > 1024.0) {
+                processSpeeds[i].upload /= 1024.0
+                uploadMetric = "MB"
+            }
+            menuItems[i].isHidden = false
+            menuItems[i].attributedTitle = NSAttributedString(string: "\(processSpeeds[i].name)  \(String(format: "%7.2lf", processSpeeds[i].download)) \(downloadMetric)/s ↓  \(String(format: "%7.2lf", processSpeeds[i].upload)) \(uploadMetric)/s ↑", attributes: menuItemTextAttributes)
         }
     }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         statusItem.length = 75
         if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n0 B/s ↑\n0 B/s ↓", attributes: textAttributes)
+            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", 0.0)) KB/s ↑\n\(String(format: "%7.2lf", 0.0)) KB/s ↓", attributes: statusBarTextAttributes)
         }
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Start", action: #selector(AppDelegate.runTimer(_:)), keyEquivalent: "S"))
-        menu.addItem(NSMenuItem(title: "Stop", action: #selector(AppDelegate.stopTimer(_:)), keyEquivalent: "T"))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "Q"))
-        statusItem.menu = menu
         
-        runTimer(_: nil)
-    }
+        quitMenuItem.action = #selector(NSApplication.terminate(_:))
+        
+        statusItem.menu = menu
     
-    @objc func stopTimer(_ sender: Any?) {
-        if (timer != nil) {
-            timer.invalidate()
-            timer = nil
-        }
-    }
-
-    @objc func runTimer(_ sender: Any?) {
-        if (timer != nil) {
-            timer.invalidate()
-        }
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
-            DispatchQueue.global(qos: .default).async {
+        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { timer in
+            DispatchQueue.global(qos: .background).async {
                 let topTask = Process()
-                let grepTask = Process()
                 topTask.launchPath = "/usr/bin/env"
-                topTask.arguments = ["top", "-d", "-i", "1", "-l", "2"]
-                grepTask.launchPath = "/usr/bin/env"
-                grepTask.arguments = ["grep", "Networks"]
+                topTask.arguments = ["nettop", "-d", "-P", "-J", "bytes_in,bytes_out", "-x", "-L", "2", "-c"]
                 
-                let pipe = Pipe()
                 let outpipe = Pipe()
-                topTask.standardOutput = pipe
-                grepTask.standardInput = pipe
-                grepTask.standardOutput = outpipe
-                
+                topTask.standardOutput = outpipe
                 topTask.launch()
-                grepTask.launch()
                 topTask.waitUntilExit()
-                grepTask.waitUntilExit()
                 
                 if let outputString = String(data: outpipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) {
-                    let splitStrings = outputString.split(separator: " ")
-                    if splitStrings.count == 11 {
-                        var downloadSpeedString = splitStrings[7].split(separator: "/")[1]
-                        var uploadSpeedString = splitStrings[9].split(separator: "/")[1]
-//                        print("U: ", String(downloadSpeedString))
-//                        print("D: ", String(uploadSpeedString))
-                        self.downloadMetric = String(downloadSpeedString.popLast() ?? "?")
-                        self.uploadMetric = String(uploadSpeedString.popLast() ?? "?")
-                        self.downloadSpeed = Double(String(downloadSpeedString)) ?? 0.0
-                        self.uploadSpeed = Double(String(uploadSpeedString)) ?? 0.0
-//                        print("U: ", self.downloadSpeed, self.downloadMetric)
-//                        print("D: ", self.uploadSpeed, self.uploadMetric)
+                    let splitStrings = outputString.split(separator: "\n")
+                    let length = splitStrings.count / 2
+                    self.processSpeeds.removeAll()
+                    for i in 1 + length ..< splitStrings.count {
+                        let cells = splitStrings[i].split(separator: ",")
+                        self.processSpeeds.append((name: String(cells[1].split(separator: ".")[0]), download: Double(cells[2])! / 1024.0, upload: Double(cells[3])! / 1024.0))
                     }
+                    self.processSpeeds.sort(by: {$0.download > $1.download})
                 }
                 
                 topTask.terminate()
-                grepTask.terminate()
                 
                 DispatchQueue.main.async {
                     self.updateSpeed()
                 }
             }
         }
+        RunLoop.current.add(timer, forMode: .common)
     }
 }

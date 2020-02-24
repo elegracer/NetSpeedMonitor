@@ -2,6 +2,6 @@
 
 Just a minimal menu bar Mac OS X app.
 
-It runs `top -d -i 1 -l 2` in a repeating timer.
+It runs `nettop -d -P -J bytes_in,bytes_out -x -L 2 -c` in a repeating timer.
 
 Use at your own risk.

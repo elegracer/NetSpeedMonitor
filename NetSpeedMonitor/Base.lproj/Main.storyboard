@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="15705" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14460.31"/>
+        <deployment identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15705"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -619,7 +620,7 @@
                                         <menuItem title="Show Sidebar" keyEquivalent="s" id="kIP-vf-haE">
                                             <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                             <connections>
-                                                <action selector="toggleSourceList:" target="Ady-hI-5gd" id="iwa-gc-5KM"/>
+                                                <action selector="toggleSidebar:" target="Ady-hI-5gd" id="iwa-gc-5KM"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Enter Full Screen" keyEquivalent="f" id="4J7-dP-txa">
@@ -674,8 +675,58 @@
                         <outlet property="delegate" destination="Voe-Tx-rLC" id="PrD-fu-P6m"/>
                     </connections>
                 </application>
-                <customObject id="Voe-Tx-rLC" customClass="AppDelegate" customModule="NetSpeedMonitor" customModuleProvider="target"/>
+                <customObject id="Voe-Tx-rLC" customClass="AppDelegate" customModule="NetSpeedMonitor" customModuleProvider="target">
+                    <connections>
+                        <outlet property="item1" destination="PKJ-4e-QuY" id="u5F-qr-8WL"/>
+                        <outlet property="item10" destination="EiX-jS-Psr" id="3Ec-I7-Bcg"/>
+                        <outlet property="item2" destination="eGm-P5-RUD" id="xK4-lu-5ML"/>
+                        <outlet property="item3" destination="mTP-UW-vsA" id="EZ1-3V-Z5W"/>
+                        <outlet property="item4" destination="5kM-Kz-mrX" id="64m-ur-Cga"/>
+                        <outlet property="item5" destination="E1B-5I-4nW" id="J8v-mS-Lat"/>
+                        <outlet property="item6" destination="c8T-aP-8Wt" id="pjK-h9-dAk"/>
+                        <outlet property="item7" destination="GqK-2O-Gny" id="Xqh-dB-hfO"/>
+                        <outlet property="item8" destination="whq-6d-haf" id="Y6g-gI-akD"/>
+                        <outlet property="item9" destination="kCM-eE-KTi" id="giE-gk-hTP"/>
+                        <outlet property="menu" destination="pkY-D9-9gb" id="4k7-ka-aht"/>
+                        <outlet property="quitMenuItem" destination="Kh4-EO-dGR" id="Lrv-ez-nLY"/>
+                    </connections>
+                </customObject>
                 <customObject id="YLy-65-1bz" customClass="NSFontManager"/>
+                <menu id="pkY-D9-9gb">
+                    <items>
+                        <menuItem title=" " hidden="YES" id="PKJ-4e-QuY">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="eGm-P5-RUD">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="mTP-UW-vsA">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="5kM-Kz-mrX">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="E1B-5I-4nW">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="c8T-aP-8Wt">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="GqK-2O-Gny">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="whq-6d-haf">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="kCM-eE-KTi">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title=" " hidden="YES" id="EiX-jS-Psr">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                        </menuItem>
+                        <menuItem title="Quit" keyEquivalent="q" id="Kh4-EO-dGR"/>
+                    </items>
+                </menu>
                 <customObject id="Ady-hI-5gd" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="75" y="0.0"/>
