@@ -11,6 +11,7 @@
 		370BAA1322341CA400243B91 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370BAA1222341CA400243B91 /* ViewController.swift */; };
 		370BAA1522341CA500243B91 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1422341CA500243B91 /* Assets.xcassets */; };
 		370BAA1822341CA500243B91 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1622341CA500243B91 /* Main.storyboard */; };
+		373EB28E2404D94F0042B13C /* NetSpeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 373EB28D2404D94F0042B13C /* NetSpeedViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,6 +22,7 @@
 		370BAA1722341CA500243B91 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		370BAA1922341CA500243B91 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NetSpeedMonitor.entitlements; sourceTree = "<group>"; };
+		373EB28D2404D94F0042B13C /* NetSpeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetSpeedViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +59,7 @@
 				370BAA1222341CA400243B91 /* ViewController.swift */,
 				370BAA1422341CA500243B91 /* Assets.xcassets */,
 				370BAA1622341CA500243B91 /* Main.storyboard */,
+				373EB28D2404D94F0042B13C /* NetSpeedViewController.swift */,
 				370BAA1922341CA500243B91 /* Info.plist */,
 				370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */,
 			);
@@ -141,6 +144,7 @@
 			files = (
 				370BAA1322341CA400243B91 /* ViewController.swift in Sources */,
 				370BAA1122341CA400243B91 /* AppDelegate.swift in Sources */,
+				373EB28E2404D94F0042B13C /* NetSpeedViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,6 +289,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -303,6 +308,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
