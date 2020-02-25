@@ -41,9 +41,8 @@
       "scale" : "2x"
     },
     {
-      "size" : "512x512",
       "idiom" : "mac",
-      "filename" : "speed.png",
+      "size" : "512x512",
       "scale" : "1x"
     },
     {

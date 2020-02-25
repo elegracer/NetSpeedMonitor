@@ -7,13 +7,33 @@
 //
 
 import Cocoa
+import ServiceManagement
 
 class NetSpeedViewController: NSViewController {
 
     @IBOutlet var tableView: NSTableView!
+    @IBOutlet var startAtLoginButton: NSButton!
 
     @IBAction func quit(_ sender: NSButton) {
         NSApplication.shared.terminate(sender)
+    }
+
+    @IBAction func toggleStartAtLogin(_ sender: NSButton) {
+        let launcherAppId = "elegracer.NetSpeedMonitorHelper"
+        print(sender.state, NSButton.StateValue.on)
+        if sender.state == .on {
+            if !SMLoginItemSetEnabled(launcherAppId as CFString, true) {
+                print("The login item was not successfull")
+            } else {
+                UserDefaults.standard.set(true, forKey: "isStartAtLogin")
+            }
+        } else {
+            if !SMLoginItemSetEnabled(launcherAppId as CFString, false) {
+                print("The login item was not successfull")
+            } else {
+                UserDefaults.standard.set(false, forKey: "isStartAtLogin")
+            }
+        }
     }
 
     var processes: [(name: String, download: Double, upload: Double)] = []
@@ -23,6 +43,8 @@ class NetSpeedViewController: NSViewController {
 
         tableView.delegate = self
         tableView.dataSource = self
+
+        startAtLoginButton.state = UserDefaults.standard.bool(forKey: "isStartAtLogin") ? .on : .off
     }
 }
 

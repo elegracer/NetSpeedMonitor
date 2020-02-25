@@ -8,6 +8,10 @@
 
 import Cocoa
 
+extension Notification.Name {
+    static let killLauncher = Notification.Name("killLauncher")
+}
+
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -47,16 +51,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", uploadSpeed)) \(uploadMetric)/s ↑\n\(String(format: "%7.2lf", downloadSpeed)) \(downloadMetric)/s ↓", attributes: statusBarTextAttributes)
         }
 
-        netspeedViewController.processes = processSpeeds
-        netspeedViewController.tableView.reloadData()
+        if let tableView = netspeedViewController.tableView {
+            netspeedViewController.processes = processSpeeds
+            tableView.reloadData()
+        }
     }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        let launcherAppId = "elegracer.NetSpeedMonitorHelper"
+        let runningApps = NSWorkspace.shared.runningApplications
+        let isRunning = !runningApps.filter { $0.bundleIdentifier == launcherAppId }.isEmpty
+
+        if isRunning {
+            DistributedNotificationCenter.default().post(name: .killLauncher, object: Bundle.main.bundleIdentifier!)
+        }
+
         statusItem.length = 75
         if let button = statusItem.button {
             button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", 0.0)) KB/s ↑\n\(String(format: "%7.2lf", 0.0)) KB/s ↓", attributes: statusBarTextAttributes)
             button.action = #selector(togglePopover(_:))
         }
+
+        popover.behavior = NSPopover.Behavior.transient
         popover.contentViewController = netspeedViewController
 
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { timer in
@@ -72,11 +88,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 if let outputString = String(data: outpipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) {
                     let splitStrings = outputString.split(separator: "\n")
-                    let length = splitStrings.count / 2
                     self.processSpeeds.removeAll()
-                    for i in 1 + length ..< splitStrings.count {
-                        let cells = splitStrings[i].split(separator: ",")
-                        self.processSpeeds.append((name: String(cells[1].split(separator: ".")[0]), download: Double(cells[2])! / 1024.0, upload: Double(cells[3])! / 1024.0))
+                    if splitStrings.count > 0 {
+                        for i in 1 + splitStrings.count / 2 ..< splitStrings.count {
+                            let cells = splitStrings[i].split(separator: ",")
+                            self.processSpeeds.append((name: String(cells[1].split(separator: ".")[0]), download: Double(cells[2])! / 1024.0, upload: Double(cells[3])! / 1024.0))
+                        }
                     }
                     self.processSpeeds.sort(by: {$0.download > $1.download})
                 }

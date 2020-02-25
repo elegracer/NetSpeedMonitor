@@ -12,7 +12,24 @@
 		370BAA1522341CA500243B91 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1422341CA500243B91 /* Assets.xcassets */; };
 		370BAA1822341CA500243B91 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1622341CA500243B91 /* Main.storyboard */; };
 		373EB28E2404D94F0042B13C /* NetSpeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 373EB28D2404D94F0042B13C /* NetSpeedViewController.swift */; };
+		37B00A942405510300BD2C77 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B00A932405510300BD2C77 /* AppDelegate.swift */; };
+		37B00A982405510300BD2C77 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 37B00A972405510300BD2C77 /* Assets.xcassets */; };
+		37B00A9B2405510300BD2C77 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 37B00A992405510300BD2C77 /* Main.storyboard */; };
+		37B00AA42405520400BD2C77 /* NetSpeedMonitorHelper.app in CopyFiles */ = {isa = PBXBuildFile; fileRef = 37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		37B00AA3240551FB00BD2C77 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Library/LoginItems;
+			dstSubfolderSpec = 1;
+			files = (
+				37B00AA42405520400BD2C77 /* NetSpeedMonitorHelper.app in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		370BAA0D22341CA400243B91 /* NetSpeedMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetSpeedMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -23,10 +40,23 @@
 		370BAA1922341CA500243B91 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NetSpeedMonitor.entitlements; sourceTree = "<group>"; };
 		373EB28D2404D94F0042B13C /* NetSpeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetSpeedViewController.swift; sourceTree = "<group>"; };
+		37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetSpeedMonitorHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		37B00A932405510300BD2C77 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		37B00A972405510300BD2C77 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		37B00A9A2405510300BD2C77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		37B00A9C2405510300BD2C77 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		37B00A9D2405510300BD2C77 /* NetSpeedMonitorHelper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NetSpeedMonitorHelper.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		370BAA0A22341CA400243B91 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		37B00A8E2405510300BD2C77 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -40,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				370BAA0F22341CA400243B91 /* NetSpeedMonitor */,
+				37B00A922405510300BD2C77 /* NetSpeedMonitorHelper */,
 				370BAA0E22341CA400243B91 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -48,6 +79,7 @@
 			isa = PBXGroup;
 			children = (
 				370BAA0D22341CA400243B91 /* NetSpeedMonitor.app */,
+				37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -66,6 +98,18 @@
 			path = NetSpeedMonitor;
 			sourceTree = "<group>";
 		};
+		37B00A922405510300BD2C77 /* NetSpeedMonitorHelper */ = {
+			isa = PBXGroup;
+			children = (
+				37B00A932405510300BD2C77 /* AppDelegate.swift */,
+				37B00A972405510300BD2C77 /* Assets.xcassets */,
+				37B00A992405510300BD2C77 /* Main.storyboard */,
+				37B00A9C2405510300BD2C77 /* Info.plist */,
+				37B00A9D2405510300BD2C77 /* NetSpeedMonitorHelper.entitlements */,
+			);
+			path = NetSpeedMonitorHelper;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -76,6 +120,7 @@
 				370BAA0922341CA400243B91 /* Sources */,
 				370BAA0A22341CA400243B91 /* Frameworks */,
 				370BAA0B22341CA400243B91 /* Resources */,
+				37B00AA3240551FB00BD2C77 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -86,13 +131,30 @@
 			productReference = 370BAA0D22341CA400243B91 /* NetSpeedMonitor.app */;
 			productType = "com.apple.product-type.application";
 		};
+		37B00A902405510300BD2C77 /* NetSpeedMonitorHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 37B00AA02405510300BD2C77 /* Build configuration list for PBXNativeTarget "NetSpeedMonitorHelper" */;
+			buildPhases = (
+				37B00A8D2405510300BD2C77 /* Sources */,
+				37B00A8E2405510300BD2C77 /* Frameworks */,
+				37B00A8F2405510300BD2C77 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NetSpeedMonitorHelper;
+			productName = NetSpeedMonitorHelper;
+			productReference = 37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		370BAA0522341CA400243B91 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1010;
+				LastSwiftUpdateCheck = 1130;
 				LastUpgradeCheck = 1130;
 				ORGANIZATIONNAME = "Team Elegracer";
 				TargetAttributes = {
@@ -104,6 +166,9 @@
 								enabled = 0;
 							};
 						};
+					};
+					37B00A902405510300BD2C77 = {
+						CreatedOnToolsVersion = 11.3.1;
 					};
 				};
 			};
@@ -121,6 +186,7 @@
 			projectRoot = "";
 			targets = (
 				370BAA0C22341CA400243B91 /* NetSpeedMonitor */,
+				37B00A902405510300BD2C77 /* NetSpeedMonitorHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -132,6 +198,15 @@
 			files = (
 				370BAA1522341CA500243B91 /* Assets.xcassets in Resources */,
 				370BAA1822341CA500243B91 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		37B00A8F2405510300BD2C77 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				37B00A982405510300BD2C77 /* Assets.xcassets in Resources */,
+				37B00A9B2405510300BD2C77 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -148,6 +223,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		37B00A8D2405510300BD2C77 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				37B00A942405510300BD2C77 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
@@ -155,6 +238,14 @@
 			isa = PBXVariantGroup;
 			children = (
 				370BAA1722341CA500243B91 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		37B00A992405510300BD2C77 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				37B00A9A2405510300BD2C77 /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
@@ -281,6 +372,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitor/NetSpeedMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -300,6 +392,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitor/NetSpeedMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -311,6 +404,50 @@
 				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		37B00A9E2405510300BD2C77 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitorHelper/NetSpeedMonitorHelper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = A7C8AN8K8W;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = NetSpeedMonitorHelper/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitorHelper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		37B00A9F2405510300BD2C77 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitorHelper/NetSpeedMonitorHelper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = A7C8AN8K8W;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = NetSpeedMonitorHelper/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitorHelper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -332,6 +469,15 @@
 			buildConfigurations = (
 				370BAA1E22341CA500243B91 /* Debug */,
 				370BAA1F22341CA500243B91 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		37B00AA02405510300BD2C77 /* Build configuration list for PBXNativeTarget "NetSpeedMonitorHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				37B00A9E2405510300BD2C77 /* Debug */,
+				37B00A9F2405510300BD2C77 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
