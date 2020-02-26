@@ -75,11 +75,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = NSPopover.Behavior.transient
         popover.contentViewController = netspeedViewController
 
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { timer in
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
             DispatchQueue.global(qos: .background).async {
                 let topTask = Process()
                 topTask.launchPath = "/usr/bin/env"
-                topTask.arguments = ["nettop", "-d", "-P", "-J", "bytes_in,bytes_out", "-x", "-L", "2", "-c"]
+                topTask.arguments = ["nettop", "-d", "-P", "-J", "bytes_in,bytes_out", "-x", "-L", "2", "-c", "-t", "external"]
 
                 let outpipe = Pipe()
                 topTask.standardOutput = outpipe
