@@ -52,7 +52,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if let tableView = netspeedViewController.tableView {
-            netspeedViewController.processes = processSpeeds
             tableView.reloadData()
         }
     }
@@ -75,56 +74,60 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = NSPopover.Behavior.transient
         popover.contentViewController = netspeedViewController
 
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
-            DispatchQueue.global(qos: .background).async {
-                let topTask = Process()
-                topTask.launchPath = "/usr/bin/env"
-                topTask.arguments = ["nettop", "-d", "-P", "-J", "bytes_in,bytes_out", "-x", "-L", "2", "-c", "-t", "external"]
+        DispatchQueue.global(qos: .background).async {
+            let topTask = Process()
+            topTask.launchPath = "/usr/bin/env"
+            topTask.arguments = ["nettop", "-d", "-P", "-J", "bytes_in,bytes_out", "-x", "-L", "0", "-c", "-t", "external"]
 
-                let outpipe = Pipe()
-                topTask.standardOutput = outpipe
-                topTask.launch()
-                topTask.waitUntilExit()
+            let outpipe = Pipe()
+            topTask.standardOutput = outpipe
+            topTask.launch()
 
-                if let outputString = String(data: outpipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) {
-                    let splitStrings = outputString.split(separator: "\n")
-                    self.processSpeeds.removeAll()
-                    if splitStrings.count > 0 {
-                        for i in 1 + splitStrings.count / 2 ..< splitStrings.count {
-                            let cells = splitStrings[i].split(separator: ",")
-                            self.processSpeeds.append((name: String(cells[1].split(separator: ".")[0]), download: Double(cells[2])! / 1024.0, upload: Double(cells[3])! / 1024.0))
+            var buffer: String = ""
+            while (topTask.isRunning) {
+                if let newData = String(data: outpipe.fileHandleForReading.readData(ofLength: 2048), encoding: .utf8) {
+                    buffer.append(contentsOf: newData)
+                    let lines = buffer.split(separator: "\n")
+                    if lines.count > 1 {
+                        for i in 0..<lines.count-1 {
+                            if lines[i] == "time,,bytes_in,bytes_out," {
+                                self.processSpeeds.sort(by: {$0.download > $1.download})
+                                self.downloadSpeed = 0.0
+                                self.uploadSpeed = 0.0
+                                for speed in self.processSpeeds {
+                                    self.downloadSpeed += speed.download
+                                    self.uploadSpeed += speed.upload
+                                }
+                                if (self.downloadSpeed > 1024.0) {
+                                    self.downloadSpeed /= 1024.0
+                                    self.downloadMetric = "MB"
+                                } else {
+                                    self.downloadMetric = "KB"
+                                }
+                                if (self.uploadSpeed > 1024.0) {
+                                    self.uploadSpeed /= 1024.0
+                                    self.uploadMetric = "MB"
+                                } else {
+                                    self.uploadMetric = "KB"
+                                }
+                                self.netspeedViewController.processes = self.processSpeeds
+                                self.processSpeeds.removeAll()
+                                DispatchQueue.main.async {
+                                    self.updateSpeed()
+                                }
+                            } else {
+                                let cells = lines[i].split(separator: ",")
+                                self.processSpeeds.append((name: String(cells[1].split(separator: ".")[0]), download: Double(cells[2])! / 1024.0, upload: Double(cells[3])! / 1024.0))
+                            }
                         }
+                        buffer = String(lines.last!)
                     }
-                    self.processSpeeds.sort(by: {$0.download > $1.download})
-                }
-
-                topTask.terminate()
-
-                self.downloadSpeed = 0.0
-                self.uploadSpeed = 0.0
-                for speed in self.processSpeeds {
-                    self.downloadSpeed += speed.download
-                    self.uploadSpeed += speed.upload
-                }
-                if (self.downloadSpeed > 1024.0) {
-                    self.downloadSpeed /= 1024.0
-                    self.downloadMetric = "MB"
-                } else {
-                    self.downloadMetric = "KB"
-                }
-                if (self.uploadSpeed > 1024.0) {
-                    self.uploadSpeed /= 1024.0
-                    self.uploadMetric = "MB"
-                } else {
-                    self.uploadMetric = "KB"
-                }
-
-                DispatchQueue.main.async {
-                    self.updateSpeed()
                 }
             }
+
+            topTask.waitUntilExit()
+            topTask.terminate()
         }
-        RunLoop.current.add(timer, forMode: .common)
     }
 
     @objc func togglePopover(_ sender: Any?) {
