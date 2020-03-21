@@ -7,6 +7,8 @@
 //
 
 import Cocoa
+import ServiceManagement
+import SystemConfiguration
 
 extension Notification.Name {
     static let killLauncher = Notification.Name("killLauncher")
@@ -15,25 +17,51 @@ extension Notification.Name {
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
 
-    let popover = NSPopover()
-    let netspeedViewController = NetSpeedViewController.freshController()
-
-    var processSpeeds: [(name: String, download: Double, upload: Double)] = []
+    @IBOutlet var menu: NSMenu!
+    @IBOutlet var startAtLoginButton: NSMenuItem!
+    @IBAction func toggleStartAtLoginButton(_ sender: NSMenuItem) {
+        let launcherAppId = "elegracer.NetSpeedMonitorHelper"
+//        print(sender.state, NSButton.StateValue.on)
+        if sender.state == .off {
+            if !SMLoginItemSetEnabled(launcherAppId as CFString, true) {
+                print("The login item was not successfull")
+            } else {
+                UserDefaults.standard.set(true, forKey: "isStartAtLogin")
+                sender.state = .on
+            }
+        } else {
+            if !SMLoginItemSetEnabled(launcherAppId as CFString, false) {
+                print("The login item was not successfull")
+            } else {
+                UserDefaults.standard.set(false, forKey: "isStartAtLogin")
+                sender.state = .off
+            }
+        }
+    }
+    @IBOutlet var quitButton: NSMenuItem!
+    @IBAction func pressQuitButton(_ sender: NSMenuItem) {
+        NSApplication.shared.terminate(sender)
+    }
 
     var uploadSpeed: Double = 0.0
     var downloadSpeed: Double = 0.0
     var uploadMetric: String = "KB"
     var downloadMetric: String = "KB"
     var statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+
+    var primaryInterface: String = {
+        let storeRef = SCDynamicStoreCreate(nil, "FindCurrentInterfaceIpMac" as CFString, nil, nil)
+        let global = SCDynamicStoreCopyValue(storeRef, "State:/Network/Global/IPv4" as CFString)
+        let primaryInterface = global?.value(forKey: "PrimaryInterface") as? String
+        return primaryInterface ?? ""
+    }()
+    var netStat: NetSpeedStat!
     var timer: Timer!
-    var topTask: Process!
-    var outpipe: Pipe!
-    var buffer: String = ""
 
     var statusBarTextAttributes : [NSAttributedString.Key : Any] {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.maximumLineHeight = 10
-        paragraphStyle.paragraphSpacing = -9
+        paragraphStyle.paragraphSpacing = -7
         paragraphStyle.alignment = .right
         return [
             NSAttributedString.Key.font : NSFont.monospacedDigitSystemFont(ofSize: 9, weight: NSFont.Weight.regular),
@@ -53,10 +81,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = statusItem.button {
             button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", uploadSpeed)) \(uploadMetric)/s ↑\n\(String(format: "%7.2lf", downloadSpeed)) \(downloadMetric)/s ↓", attributes: statusBarTextAttributes)
         }
-
-        if let tableView = netspeedViewController.tableView {
-            tableView.reloadData()
-        }
     }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
@@ -71,83 +95,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.length = 75
         if let button = statusItem.button {
             button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", 0.0)) KB/s ↑\n\(String(format: "%7.2lf", 0.0)) KB/s ↓", attributes: statusBarTextAttributes)
-            button.action = #selector(togglePopover(_:))
         }
 
-        popover.behavior = NSPopover.Behavior.transient
-        popover.contentViewController = netspeedViewController
+        startAtLoginButton.state = UserDefaults.standard.bool(forKey: "isStartAtLogin") ? .on : .off
 
-        DispatchQueue.global(qos: .background).async {
-            self.topTask = Process()
-            self.topTask.launchPath = "/usr/bin/env"
-            self.topTask.arguments = ["nettop", "-d", "-P", "-J", "bytes_in,bytes_out", "-x", "-L", "0", "-c", "-t", "external", "-s", "2"]
+        statusItem.menu = menu
 
-            self.outpipe = Pipe()
-            self.topTask.standardOutput = self.outpipe
-            self.topTask.launch()
-
-            self.timer = Timer.scheduledTimer(withTimeInterval: 1.9, repeats: true) { _ in
-                if let newData = String(data: self.outpipe.fileHandleForReading.readData(ofLength: 1024), encoding: .utf8) {
-                    self.buffer.append(contentsOf: newData)
-                    let lines = self.buffer.split(separator: "\n")
-                    if lines.count > 1 {
-                        for i in 0..<lines.count-1 {
-                            if lines[i] == "time,,bytes_in,bytes_out," {
-                                self.processSpeeds.sort(by: {$0.download > $1.download})
-                                self.downloadSpeed = 0.0
-                                self.uploadSpeed = 0.0
-                                for speed in self.processSpeeds {
-                                    self.downloadSpeed += speed.download
-                                    self.uploadSpeed += speed.upload
-                                }
-                                if (self.downloadSpeed > 1000.0) {
-                                    self.downloadSpeed /= 1024.0
-                                    self.downloadMetric = "MB"
-                                } else {
-                                    self.downloadMetric = "KB"
-                                }
-                                if (self.uploadSpeed > 1000.0) {
-                                    self.uploadSpeed /= 1024.0
-                                    self.uploadMetric = "MB"
-                                } else {
-                                    self.uploadMetric = "KB"
-                                }
-                                self.netspeedViewController.processes = self.processSpeeds
-                                self.processSpeeds.removeAll()
-                                DispatchQueue.main.async {
-                                    self.updateSpeed()
-                                }
-                            } else {
-                                let cells = lines[i].split(separator: ",")
-                                self.processSpeeds.append((name: String(cells[1].split(separator: ".")[0]), download: Double(cells[2])! / 1024.0 / 2.0, upload: Double(cells[3])! / 1024.0 / 2.0))
-                            }
+        self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            if (self.netStat == nil) {
+                self.netStat = NetSpeedStat()
+//                print(String(format: "netStat: %p", self.netStat))
+                self.downloadSpeed = 0.0
+                self.downloadMetric = "KB"
+                self.uploadSpeed = 0.0
+                self.uploadMetric = "KB"
+            } else {
+                if let statResult = self.netStat.getStatsForInterval(1.0) as NSDictionary? {
+                    if let dict = statResult.object(forKey: self.primaryInterface) {
+                        let list = dict as! Dictionary<String, UInt64>
+                        let deltain: Double = Double(list["deltain"] ?? 0) / 1024.0
+                        let deltaout: Double = Double(list["deltaout"] ?? 0) / 1024.0
+                        if (deltain > 1000.0) {
+                            self.downloadSpeed = deltain / 1024.0
+                            self.downloadMetric = "MB"
+                        } else {
+                            self.downloadSpeed = deltain
+                            self.downloadMetric = "KB"
                         }
-                        self.buffer = String(lines.last!)
+                        if (deltaout > 1000.0) {
+                            self.uploadSpeed = deltaout / 1024.0
+                            self.uploadMetric = "MB"
+                        } else {
+                            self.uploadSpeed = deltaout
+                            self.uploadMetric = "KB"
+                        }
+                        self.updateSpeed()
+//                        print("deltaIn: \(self.downloadSpeed) \(self.downloadMetric)/s, deltaOut: \(self.uploadSpeed) \(self.uploadMetric)/s")
                     }
                 }
             }
-            RunLoop.current.add(self.timer, forMode: .common)
-
-            self.topTask.waitUntilExit()
-            self.topTask.terminate()
         }
-    }
-
-    @objc func togglePopover(_ sender: Any?) {
-        if popover.isShown {
-            closePopover(sender: sender)
-        } else {
-            showPopover(sender: sender)
-        }
-    }
-
-    func showPopover(sender: Any?) {
-        if let button = statusItem.button {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: NSRectEdge.minY)
-        }
-    }
-
-    func closePopover(sender: Any?) {
-        popover.performClose(sender)
+        RunLoop.current.add(self.timer, forMode: .common)
     }
 }

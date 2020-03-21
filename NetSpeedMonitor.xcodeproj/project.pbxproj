@@ -11,7 +11,7 @@
 		370BAA1322341CA400243B91 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370BAA1222341CA400243B91 /* ViewController.swift */; };
 		370BAA1522341CA500243B91 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1422341CA500243B91 /* Assets.xcassets */; };
 		370BAA1822341CA500243B91 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1622341CA500243B91 /* Main.storyboard */; };
-		373EB28E2404D94F0042B13C /* NetSpeedViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 373EB28D2404D94F0042B13C /* NetSpeedViewController.swift */; };
+		375233892426224500A317FA /* NetSpeedStat.m in Sources */ = {isa = PBXBuildFile; fileRef = 375233882426224500A317FA /* NetSpeedStat.m */; };
 		37B00A942405510300BD2C77 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B00A932405510300BD2C77 /* AppDelegate.swift */; };
 		37B00A982405510300BD2C77 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 37B00A972405510300BD2C77 /* Assets.xcassets */; };
 		37B00A9B2405510300BD2C77 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 37B00A992405510300BD2C77 /* Main.storyboard */; };
@@ -39,7 +39,9 @@
 		370BAA1722341CA500243B91 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		370BAA1922341CA500243B91 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NetSpeedMonitor.entitlements; sourceTree = "<group>"; };
-		373EB28D2404D94F0042B13C /* NetSpeedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetSpeedViewController.swift; sourceTree = "<group>"; };
+		375233862426224500A317FA /* NetSpeedMonitor-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NetSpeedMonitor-Bridging-Header.h"; sourceTree = "<group>"; };
+		375233872426224500A317FA /* NetSpeedStat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetSpeedStat.h; sourceTree = "<group>"; };
+		375233882426224500A317FA /* NetSpeedStat.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NetSpeedStat.m; sourceTree = "<group>"; };
 		37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetSpeedMonitorHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		37B00A932405510300BD2C77 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		37B00A972405510300BD2C77 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -91,9 +93,11 @@
 				370BAA1222341CA400243B91 /* ViewController.swift */,
 				370BAA1422341CA500243B91 /* Assets.xcassets */,
 				370BAA1622341CA500243B91 /* Main.storyboard */,
-				373EB28D2404D94F0042B13C /* NetSpeedViewController.swift */,
 				370BAA1922341CA500243B91 /* Info.plist */,
 				370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */,
+				375233872426224500A317FA /* NetSpeedStat.h */,
+				375233882426224500A317FA /* NetSpeedStat.m */,
+				375233862426224500A317FA /* NetSpeedMonitor-Bridging-Header.h */,
 			);
 			path = NetSpeedMonitor;
 			sourceTree = "<group>";
@@ -218,8 +222,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				370BAA1322341CA400243B91 /* ViewController.swift in Sources */,
+				375233892426224500A317FA /* NetSpeedStat.m in Sources */,
 				370BAA1122341CA400243B91 /* AppDelegate.swift in Sources */,
-				373EB28E2404D94F0042B13C /* NetSpeedViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,7 +308,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -359,7 +363,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -372,6 +376,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitor/NetSpeedMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -384,6 +389,8 @@
 				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "NetSpeedMonitor/NetSpeedMonitor-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -392,6 +399,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitor/NetSpeedMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -404,6 +412,7 @@
 				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "NetSpeedMonitor/NetSpeedMonitor-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -422,7 +431,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitorHelper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -444,7 +453,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitorHelper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

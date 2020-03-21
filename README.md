@@ -2,6 +2,6 @@
 
 Just a minimal menu bar Mac OS X app.
 
-It runs `nettop -d -P -J bytes_in,bytes_out -x -L 2 -c -t external` in a repeating timer.
+It runs `sysctl` with c interface in a repeating timer.
 
 Use at your own risk.
