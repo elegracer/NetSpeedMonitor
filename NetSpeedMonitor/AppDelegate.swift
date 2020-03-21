@@ -26,6 +26,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var downloadMetric: String = "KB"
     var statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     var timer: Timer!
+    var topTask: Process!
+    var outpipe: Pipe!
+    var buffer: String = ""
 
     var statusBarTextAttributes : [NSAttributedString.Key : Any] {
         let paragraphStyle = NSMutableParagraphStyle()
@@ -75,19 +78,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = netspeedViewController
 
         DispatchQueue.global(qos: .background).async {
-            let topTask = Process()
-            topTask.launchPath = "/usr/bin/env"
-            topTask.arguments = ["nettop", "-d", "-P", "-J", "bytes_in,bytes_out", "-x", "-L", "0", "-c", "-t", "external"]
+            self.topTask = Process()
+            self.topTask.launchPath = "/usr/bin/env"
+            self.topTask.arguments = ["nettop", "-d", "-P", "-J", "bytes_in,bytes_out", "-x", "-L", "0", "-c", "-t", "external", "-s", "2"]
 
-            let outpipe = Pipe()
-            topTask.standardOutput = outpipe
-            topTask.launch()
+            self.outpipe = Pipe()
+            self.topTask.standardOutput = self.outpipe
+            self.topTask.launch()
 
-            var buffer: String = ""
-            while (topTask.isRunning) {
-                if let newData = String(data: outpipe.fileHandleForReading.readData(ofLength: 2048), encoding: .utf8) {
-                    buffer.append(contentsOf: newData)
-                    let lines = buffer.split(separator: "\n")
+            self.timer = Timer.scheduledTimer(withTimeInterval: 1.9, repeats: true) { _ in
+                if let newData = String(data: self.outpipe.fileHandleForReading.readData(ofLength: 1024), encoding: .utf8) {
+                    self.buffer.append(contentsOf: newData)
+                    let lines = self.buffer.split(separator: "\n")
                     if lines.count > 1 {
                         for i in 0..<lines.count-1 {
                             if lines[i] == "time,,bytes_in,bytes_out," {
@@ -98,13 +100,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                     self.downloadSpeed += speed.download
                                     self.uploadSpeed += speed.upload
                                 }
-                                if (self.downloadSpeed > 1024.0) {
+                                if (self.downloadSpeed > 1000.0) {
                                     self.downloadSpeed /= 1024.0
                                     self.downloadMetric = "MB"
                                 } else {
                                     self.downloadMetric = "KB"
                                 }
-                                if (self.uploadSpeed > 1024.0) {
+                                if (self.uploadSpeed > 1000.0) {
                                     self.uploadSpeed /= 1024.0
                                     self.uploadMetric = "MB"
                                 } else {
@@ -117,16 +119,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                 }
                             } else {
                                 let cells = lines[i].split(separator: ",")
-                                self.processSpeeds.append((name: String(cells[1].split(separator: ".")[0]), download: Double(cells[2])! / 1024.0, upload: Double(cells[3])! / 1024.0))
+                                self.processSpeeds.append((name: String(cells[1].split(separator: ".")[0]), download: Double(cells[2])! / 1024.0 / 2.0, upload: Double(cells[3])! / 1024.0 / 2.0))
                             }
                         }
-                        buffer = String(lines.last!)
+                        self.buffer = String(lines.last!)
                     }
                 }
             }
+            RunLoop.current.add(self.timer, forMode: .common)
 
-            topTask.waitUntilExit()
-            topTask.terminate()
+            self.topTask.waitUntilExit()
+            self.topTask.terminate()
         }
     }
 

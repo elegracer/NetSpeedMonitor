@@ -83,7 +83,7 @@ extension NetSpeedViewController: NSTableViewDelegate, NSTableViewDataSource {
             cellIdentifier = CellIdentifiers.ProcessNameCell
         } else if tableColumn == tableView.tableColumns[1] {
             speed = processes[row].download
-            if (speed > 1024.0) {
+            if (speed > 1000.0) {
                 text = String(format: "%.2lf MB/s", speed / 1024.0)
             } else {
                 text = String(format: "%.2lf KB/s", speed)
@@ -91,7 +91,7 @@ extension NetSpeedViewController: NSTableViewDelegate, NSTableViewDataSource {
             cellIdentifier = CellIdentifiers.DownloadSpeedCell
         } else if tableColumn == tableView.tableColumns[2] {
             speed = processes[row].upload
-            if (speed > 1024.0) {
+            if (speed > 1000.0) {
                 text = String(format: "%.2lf MB/s", speed / 1024.0)
             } else {
                 text = String(format: "%.2lf KB/s", speed)
