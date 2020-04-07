@@ -61,7 +61,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarTextAttributes : [NSAttributedString.Key : Any] {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .right
-        if let font = NSFont(name: "Menlo", size: 9) {
+        if let font = NSFont(name: "SFMono-Regular", size: 9) {
             paragraphStyle.maximumLineHeight = 10
             paragraphStyle.paragraphSpacing = -5
             return [
@@ -80,7 +80,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func updateSpeed() {
         if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", uploadSpeed)) \(uploadMetric)/s ⬆\n\(String(format: "%7.2lf", downloadSpeed)) \(downloadMetric)/s ⬇", attributes: statusBarTextAttributes)
+            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", uploadSpeed)) \(uploadMetric)/s ↑\n\(String(format: "%7.2lf", downloadSpeed)) \(downloadMetric)/s ↓", attributes: statusBarTextAttributes)
         }
     }
 
@@ -95,7 +95,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusItem.length = 85
         if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", 0.0)) KB/s ⬆\n\(String(format: "%7.2lf", 0.0)) KB/s ⬇", attributes: statusBarTextAttributes)
+            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", 0.0)) KB/s ↑\n\(String(format: "%7.2lf", 0.0)) KB/s ↓", attributes: statusBarTextAttributes)
         }
 
         startAtLoginButton.state = UserDefaults.standard.bool(forKey: "isStartAtLogin") ? .on : .off
