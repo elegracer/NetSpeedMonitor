@@ -61,21 +61,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarTextAttributes : [NSAttributedString.Key : Any] {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .right
+        paragraphStyle.maximumLineHeight = 10
+        var map = [NSAttributedString.Key : Any]()
         if let font = NSFont(name: "SFMono-Regular", size: 9) {
-            paragraphStyle.maximumLineHeight = 10
             paragraphStyle.paragraphSpacing = -5
-            return [
-                NSAttributedString.Key.font : font,
-                NSAttributedString.Key.paragraphStyle: paragraphStyle
-            ] as [NSAttributedString.Key : Any]
+            map[NSAttributedString.Key.font] = font
+            if #available(macOS 11, *) {
+                map[NSAttributedString.Key.baselineOffset] = -4
+            }
         } else {
-            paragraphStyle.maximumLineHeight = 10
             paragraphStyle.paragraphSpacing = -7
-            return [
-                NSAttributedString.Key.font : NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .regular),
-                NSAttributedString.Key.paragraphStyle: paragraphStyle
-            ] as [NSAttributedString.Key : Any]
+            map[NSAttributedString.Key.font] = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .regular)
         }
+        map[NSAttributedString.Key.paragraphStyle] = paragraphStyle
+        return map
     }
 
     func updateSpeed() {
