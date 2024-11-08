@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="15705" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15705"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
     </dependencies>
     <scenes>
         <!--Application-->
@@ -678,7 +678,11 @@
                     <connections>
                         <outlet property="menu" destination="KEw-F9-ROF" id="7kx-Ww-g1G"/>
                         <outlet property="quitButton" destination="2NR-AN-bOI" id="gGj-BM-m4r"/>
-                        <outlet property="startAtLoginButton" destination="PoJ-XV-daP" id="EK5-iq-DH4"/>
+                        <outlet property="startAtLoginMenuItem" destination="PoJ-XV-daP" id="EK5-iq-DH4"/>
+                        <outlet property="updateInteval1sMenuItem" destination="Kc0-Sb-EKY" id="EYL-2j-7dl"/>
+                        <outlet property="updateInteval2sMenuItem" destination="SiD-dw-IuF" id="3I2-UL-pCZ"/>
+                        <outlet property="updateInteval4sMenuItem" destination="ijI-Pr-c1G" id="kpI-OJ-7zL"/>
+                        <outlet property="updateInteval8sMenuItem" destination="T2T-hC-Wqv" id="mJj-of-2Se"/>
                     </connections>
                 </customObject>
                 <customObject id="YLy-65-1bz" customClass="NSFontManager"/>
@@ -688,14 +692,45 @@
                         <menuItem title="Start at Login" id="PoJ-XV-daP">
                             <modifierMask key="keyEquivalentModifierMask"/>
                             <connections>
-                                <action selector="toggleStartAtLoginButton:" target="Voe-Tx-rLC" id="xlK-J1-IvC"/>
+                                <action selector="onPressStartAtLoginMenuItem:" target="Voe-Tx-rLC" id="zXb-90-xCH"/>
                             </connections>
+                        </menuItem>
+                        <menuItem title="Update Inteval" id="hj4-xP-9Va">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                            <menu key="submenu" title="Update Inteval" id="tDh-PN-036">
+                                <items>
+                                    <menuItem title="1s" id="Kc0-Sb-EKY">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                        <connections>
+                                            <action selector="onClickUpdateInteval1s:" target="Voe-Tx-rLC" id="2KD-nX-sGD"/>
+                                        </connections>
+                                    </menuItem>
+                                    <menuItem title="2s" id="SiD-dw-IuF">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                        <connections>
+                                            <action selector="onClickUpdateInteval2s:" target="Voe-Tx-rLC" id="97h-l6-QQW"/>
+                                        </connections>
+                                    </menuItem>
+                                    <menuItem title="4s" id="ijI-Pr-c1G">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                        <connections>
+                                            <action selector="onClickUpdateInteval4s:" target="Voe-Tx-rLC" id="utt-Qa-Mmy"/>
+                                        </connections>
+                                    </menuItem>
+                                    <menuItem title="8s" id="T2T-hC-Wqv">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                        <connections>
+                                            <action selector="onClickUpdateInteval8s:" target="Voe-Tx-rLC" id="BRD-hh-jbQ"/>
+                                        </connections>
+                                    </menuItem>
+                                </items>
+                            </menu>
                         </menuItem>
                         <menuItem isSeparatorItem="YES" id="Iwi-lo-Q5e"/>
                         <menuItem title="Quit" id="2NR-AN-bOI">
                             <modifierMask key="keyEquivalentModifierMask"/>
                             <connections>
-                                <action selector="pressQuitButton:" target="Voe-Tx-rLC" id="wfj-wH-l1R"/>
+                                <action selector="onPressQuitMenuItem:" target="Voe-Tx-rLC" id="wfj-wH-l1R"/>
                             </connections>
                         </menuItem>
                     </items>

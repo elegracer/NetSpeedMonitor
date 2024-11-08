@@ -16,39 +16,75 @@ extension Notification.Name {
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
-
+    let launcherAppId = "elegracer.NetSpeedMonitorHelper" as String
+    let keyIsStartAtLogin = "isStartAtLogin" as String
+    let keyUpdateInteval = "updateInteval" as String
+    
     @IBOutlet var menu: NSMenu!
-    @IBOutlet var startAtLoginButton: NSMenuItem!
-    @IBAction func toggleStartAtLoginButton(_ sender: NSMenuItem) {
-        let launcherAppId = "elegracer.NetSpeedMonitorHelper"
-//        print(sender.state, NSButton.StateValue.on)
-        if sender.state == .off {
-            if !SMLoginItemSetEnabled(launcherAppId as CFString, true) {
-                print("The login item was not successfull")
-            } else {
-                UserDefaults.standard.set(true, forKey: "isStartAtLogin")
-                sender.state = .on
-            }
+    @IBOutlet var startAtLoginMenuItem: NSMenuItem!
+    @IBAction func onPressStartAtLoginMenuItem(_ sender: NSMenuItem) {
+        let isStartAtLogin = sender.state == .on
+        if !SMLoginItemSetEnabled(launcherAppId as CFString, !isStartAtLogin) {
+            print("Error when toggling item for ", keyIsStartAtLogin)
         } else {
-            if !SMLoginItemSetEnabled(launcherAppId as CFString, false) {
-                print("The login item was not successfull")
-            } else {
-                UserDefaults.standard.set(false, forKey: "isStartAtLogin")
-                sender.state = .off
-            }
+            UserDefaults.standard.set(!isStartAtLogin, forKey: keyIsStartAtLogin)
+            sender.state = !isStartAtLogin ? .on : .off
         }
     }
     @IBOutlet var quitButton: NSMenuItem!
-    @IBAction func pressQuitButton(_ sender: NSMenuItem) {
+    @IBAction func onPressQuitMenuItem(_ sender: NSMenuItem) {
+        print("isStartAtLogin: ", UserDefaults.standard.bool(forKey: keyIsStartAtLogin), ", updateInteval: ", UserDefaults.standard.integer(forKey: keyUpdateInteval))
         NSApplication.shared.terminate(sender)
     }
-
+    
+    @IBOutlet var updateInteval1sMenuItem: NSMenuItem!
+    @IBOutlet var updateInteval2sMenuItem: NSMenuItem!
+    @IBOutlet var updateInteval4sMenuItem: NSMenuItem!
+    @IBOutlet var updateInteval8sMenuItem: NSMenuItem!
+    var updateIntevalMenuItemCollection: [NSMenuItem] {
+        return [
+            self.updateInteval1sMenuItem,
+            self.updateInteval2sMenuItem,
+            self.updateInteval4sMenuItem,
+            self.updateInteval8sMenuItem
+        ]
+    }
+    
+    var updateIntevalInSec = 1.0
+    let validUpdateIntevals : [Int] = [1, 2, 4, 8]
+    
+    func onClickUpdateIntevalMenuItem(_ sender: NSMenuItem, value: Int) {
+        updateIntevalInSec = Double(value)
+        for updateIntevalMenuItem in updateIntevalMenuItemCollection {
+            updateIntevalMenuItem.state = .off
+        }
+        sender.state = .on
+        UserDefaults.standard.set(value, forKey: keyUpdateInteval)
+        resetTimer()
+    }
+    
+    @IBAction func onClickUpdateInteval1s(_ sender: NSMenuItem) {
+        onClickUpdateIntevalMenuItem(sender, value: 1)
+    }
+    @IBAction func onClickUpdateInteval2s(_ sender: NSMenuItem) {
+        onClickUpdateIntevalMenuItem(sender, value: 2)
+    }
+    @IBAction func onClickUpdateInteval4s(_ sender: NSMenuItem) {
+        onClickUpdateIntevalMenuItem(sender, value: 4)
+    }
+    @IBAction func onClickUpdateInteval8s(_ sender: NSMenuItem) {
+        onClickUpdateIntevalMenuItem(sender, value: 8)
+    }
+    
     var uploadSpeed: Double = 0.0
     var downloadSpeed: Double = 0.0
-    var uploadMetric: String = "KB"
-    var downloadMetric: String = "KB"
+    var uploadMetric: String = " B"
+    var downloadMetric: String = " B"
+    
+    let speedMetrics: [String] = [" B", "KB", "MB", "GB"]
+    
     var statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-
+    
     var primaryInterface: String = {
         let storeRef = SCDynamicStoreCreate(nil, "FindCurrentInterfaceIpMac" as CFString, nil, nil)
         let global = SCDynamicStoreCopyValue(storeRef, "State:/Network/Global/IPv4" as CFString)
@@ -57,84 +93,89 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }()
     var netStat: NetSpeedStat!
     var timer: Timer!
-
+    
     var statusBarTextAttributes : [NSAttributedString.Key : Any] {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .right
         paragraphStyle.maximumLineHeight = 10
+        paragraphStyle.paragraphSpacing = -5
         var map = [NSAttributedString.Key : Any]()
-        if let font = NSFont(name: "SFMono-Regular", size: 9) {
-            paragraphStyle.paragraphSpacing = -5
-            map[NSAttributedString.Key.font] = font
-            if #available(macOS 11, *) {
-                map[NSAttributedString.Key.baselineOffset] = -4
-            }
-        } else {
-            paragraphStyle.paragraphSpacing = -7
-            map[NSAttributedString.Key.font] = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .regular)
-        }
+        map[NSAttributedString.Key.font] = NSFont(name: "SFMono-Semibold", size: 8)!
+        map[NSAttributedString.Key.baselineOffset] = -5
         map[NSAttributedString.Key.paragraphStyle] = paragraphStyle
         return map
     }
-
+    
     func updateSpeed() {
         if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", uploadSpeed)) \(uploadMetric)/s ↑\n\(String(format: "%7.2lf", downloadSpeed)) \(downloadMetric)/s ↓", attributes: statusBarTextAttributes)
+            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%6.2lf", uploadSpeed)) \(uploadMetric)/s ↑\n\(String(format: "%6.2lf", downloadSpeed)) \(downloadMetric)/s ↓", attributes: statusBarTextAttributes)
         }
     }
-
+    
+    func startRepeatTimer() {
+        self.timer = Timer.scheduledTimer(withTimeInterval: updateIntevalInSec, repeats: true) { _ in
+            if (self.netStat == nil) {
+                self.netStat = NetSpeedStat()
+                self.downloadSpeed = 0.0
+                self.downloadMetric = " B"
+                self.uploadSpeed = 0.0
+                self.uploadMetric = " B"
+                return
+            }
+            
+            if let statResult = self.netStat.getStatsForInterval(self.updateIntevalInSec) as NSDictionary? {
+                if let dict = statResult.object(forKey: self.primaryInterface) {
+                    let list = dict as! Dictionary<String, UInt64>
+                    self.downloadSpeed = Double(list["deltain"] ?? 0) / self.updateIntevalInSec
+                    self.uploadSpeed = Double(list["deltaout"] ?? 0) / self.updateIntevalInSec
+                    self.downloadMetric = self.speedMetrics.first!
+                    self.uploadMetric = self.speedMetrics.first!
+                    for metric in self.speedMetrics.dropFirst() {
+                        if self.downloadSpeed > 1000.0 {
+                            self.downloadSpeed /= 1024.0
+                            self.downloadMetric = metric
+                        }
+                        if self.uploadSpeed > 1000.0 {
+                            self.uploadSpeed /= 1024.0
+                            self.uploadMetric = metric
+                        }
+                    }
+                    self.updateSpeed()
+                    print("deltaIn: \(self.downloadSpeed) \(self.downloadMetric)/s, deltaOut: \(self.uploadSpeed) \(self.uploadMetric)/s")
+                }
+            }
+            
+        }
+        RunLoop.current.add(self.timer, forMode: .common)
+    }
+    
+    func resetTimer() {
+        if self.timer != nil {
+            self.timer.invalidate()
+        }
+        startRepeatTimer()
+    }
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        let launcherAppId = "elegracer.NetSpeedMonitorHelper"
         let runningApps = NSWorkspace.shared.runningApplications
-        let isRunning = !runningApps.filter { $0.bundleIdentifier == launcherAppId }.isEmpty
-
+        let isRunning = !runningApps.filter { $0.bundleIdentifier == self.launcherAppId }.isEmpty
+        
         if isRunning {
             DistributedNotificationCenter.default().post(name: .killLauncher, object: Bundle.main.bundleIdentifier!)
         }
-
-        statusItem.length = 85
-        if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%7.2lf", 0.0)) KB/s ↑\n\(String(format: "%7.2lf", 0.0)) KB/s ↓", attributes: statusBarTextAttributes)
-        }
-
-        startAtLoginButton.state = UserDefaults.standard.bool(forKey: "isStartAtLogin") ? .on : .off
-
+        
+        statusItem.length = 75
         statusItem.menu = menu
-
-        self.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if (self.netStat == nil) {
-                self.netStat = NetSpeedStat()
-//                print(String(format: "netStat: %p", self.netStat))
-                self.downloadSpeed = 0.0
-                self.downloadMetric = "KB"
-                self.uploadSpeed = 0.0
-                self.uploadMetric = "KB"
-            } else {
-                if let statResult = self.netStat.getStatsForInterval(1.0) as NSDictionary? {
-                    if let dict = statResult.object(forKey: self.primaryInterface) {
-                        let list = dict as! Dictionary<String, UInt64>
-                        let deltain: Double = Double(list["deltain"] ?? 0) / 1024.0
-                        let deltaout: Double = Double(list["deltaout"] ?? 0) / 1024.0
-                        if (deltain > 1000.0) {
-                            self.downloadSpeed = deltain / 1024.0
-                            self.downloadMetric = "MB"
-                        } else {
-                            self.downloadSpeed = deltain
-                            self.downloadMetric = "KB"
-                        }
-                        if (deltaout > 1000.0) {
-                            self.uploadSpeed = deltaout / 1024.0
-                            self.uploadMetric = "MB"
-                        } else {
-                            self.uploadSpeed = deltaout
-                            self.uploadMetric = "KB"
-                        }
-                        self.updateSpeed()
-//                        print("deltaIn: \(self.downloadSpeed) \(self.downloadMetric)/s, deltaOut: \(self.uploadSpeed) \(self.uploadMetric)/s")
-                    }
-                }
-            }
+        startAtLoginMenuItem.state = UserDefaults.standard.bool(forKey: keyIsStartAtLogin) ? .on : .off
+        
+        let savedUpdateInteval = UserDefaults.standard.integer(forKey: keyUpdateInteval)
+        if self.validUpdateIntevals.contains(savedUpdateInteval) {
+            let index = self.validUpdateIntevals.firstIndex(of: savedUpdateInteval)!
+            onClickUpdateIntevalMenuItem(updateIntevalMenuItemCollection[index], value: validUpdateIntevals[index])
+        } else {
+            onClickUpdateIntevalMenuItem(updateIntevalMenuItemCollection[0], value: validUpdateIntevals[0])
         }
-        RunLoop.current.add(self.timer, forMode: .common)
+        
+        updateSpeed()
     }
 }
