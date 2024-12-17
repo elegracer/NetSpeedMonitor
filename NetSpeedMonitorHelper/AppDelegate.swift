@@ -18,7 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         let mainAppIdentifier = "elegracer.NetSpeedMonitor"
         let runningApps = NSWorkspace.shared.runningApplications
-        let isRunning = !runningApps.filter { $0.bundleIdentifier == mainAppIdentifier }.isEmpty
+        let isRunning = runningApps.contains { $0.bundleIdentifier == mainAppIdentifier }
 
         if !isRunning {
             DistributedNotificationCenter.default().addObserver(self, selector: #selector(self.terminate), name: .killLauncher, object: mainAppIdentifier)
@@ -32,6 +32,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let newPath = NSString.path(withComponents: components)
 
             NSWorkspace.shared.launchApplication(newPath)
+//            let fileURL = URL(fileURLWithPath: newPath)
+//            NSWorkspace.shared.openApplication(at: fileURL, configuration: NSWorkspace.OpenConfiguration() )
         } else {
             self.terminate()
         }
