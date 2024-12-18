@@ -85,12 +85,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     var statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     
-    var primaryInterface: String = {
-        let storeRef = SCDynamicStoreCreate(nil, "FindCurrentInterfaceIpMac" as CFString, nil, nil)
-        let global = SCDynamicStoreCopyValue(storeRef, "State:/Network/Global/IPv4" as CFString)
-        let primaryInterface = global?.value(forKey: "PrimaryInterface") as? String
-        return primaryInterface ?? ""
-    }()
+    var primaryInterface: String?
     var netStat: NetSpeedStat!
     var timer: Timer!
     
@@ -104,6 +99,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         map[NSAttributedString.Key.baselineOffset] = -5
         map[NSAttributedString.Key.paragraphStyle] = paragraphStyle
         return map
+    }
+    
+    func findPrimaryInterface() -> String? {
+        let storeRef = SCDynamicStoreCreate(nil, "FindCurrentInterfaceIpMac" as CFString, nil, nil)
+        let global = SCDynamicStoreCopyValue(storeRef, "State:/Network/Global/IPv4" as CFString)
+        let primaryInterface = global?.value(forKey: "PrimaryInterface") as? String
+        return primaryInterface
     }
     
     func updateSpeed() {
@@ -124,7 +126,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             
             if let statResult = self.netStat.getStatsForInterval(self.updateIntevalInSec) as NSDictionary? {
-                if let dict = statResult.object(forKey: self.primaryInterface) {
+                if (self.primaryInterface == nil) {
+                    self.primaryInterface = self.findPrimaryInterface();
+                    if (self.primaryInterface == nil) {
+                        return
+                    }
+                }
+                if let dict = statResult.object(forKey: self.primaryInterface!) {
                     let list = dict as! Dictionary<String, UInt64>
                     self.downloadSpeed = Double(list["deltain"] ?? 0) / self.updateIntevalInSec
                     self.uploadSpeed = Double(list["deltaout"] ?? 0) / self.updateIntevalInSec
@@ -158,8 +166,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         let runningApps = NSWorkspace.shared.runningApplications
-        let isRunning = !runningApps.filter { $0.bundleIdentifier == self.launcherAppId }.isEmpty
-        
+        let isRunning = runningApps.contains { $0.bundleIdentifier == self.launcherAppId }
+
         if isRunning {
             DistributedNotificationCenter.default().post(name: .killLauncher, object: Bundle.main.bundleIdentifier!)
         }
