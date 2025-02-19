@@ -1,0 +1,60 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create Build Directory
+      run: mkdir -p build
+
+    - name: Build with Xcode
+      run: |
+        xcodebuild \
+          -project NetSpeedMonitor.xcodeproj \
+          -scheme NetSpeedMonitor \
+          -configuration Release \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          CONFIGURATION_BUILD_DIR=build/Release \
+          clean build
+
+    - name: Ad-hoc Code Signing
+      run: |
+        codesign --force --deep --sign - "build/Release/NetSpeedMonitor.app"
+
+    - name: Remove Attributes
+      run: |
+        xattr -cr "build/Release/NetSpeedMonitor.app"
+        xattr -r -d com.apple.quarantine "build/Release/NetSpeedMonitor.app"
+        xattr -r -d com.apple.metadata:kMDItemWhereFroms "build/Release/NetSpeedMonitor.app"
+
+    - name: Package .app to .zip
+      run: |
+        cd build/Release
+        zip -r NetSpeedMonitor.zip NetSpeedMonitor.app
+
+    - name: Get Release Notes
+      id: get_notes
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        NOTES=$(awk "/## $TAG_NAME/{flag=1;next}/## /{flag=0}flag" RELEASE_NOTES.md)
+        echo "notes=$NOTES" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body: ${{ steps.get_notes.outputs.notes }}
+        files: |
+          build/Release/NetSpeedMonitor.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
