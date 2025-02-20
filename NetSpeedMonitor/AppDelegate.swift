@@ -9,6 +9,7 @@
 import Cocoa
 import ServiceManagement
 import SystemConfiguration
+import os.log
 
 extension Notification.Name {
     static let killLauncher = Notification.Name("killLauncher")
@@ -91,6 +92,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var netTrafficStat: NetTrafficStatReceiver!
     var timer: Timer!
 
+    let info_logger = Logger(subsystem: "com.elegracer.NetSpeedMonitor", category: "elegracer")
+
     var statusBarTextAttributes: [NSAttributedString.Key: Any] {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .right
@@ -155,9 +158,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         }
                     }
                     self.updateSpeed()
-                    print(
-                        "deltaIn: \(String(format:"%.6f", self.downloadSpeed)) \(self.downloadMetric)/s, deltaOut: \(String(format:"%.6f", self.uploadSpeed)) \(self.uploadMetric)/s"
-                    )
+                    self.info_logger.info("deltaIn: \(String(format:"%.6f", self.downloadSpeed)) \(self.downloadMetric)/s, deltaOut: \(String(format:"%.6f", self.uploadSpeed)) \(self.uploadMetric)/s")
                 }
             }
 
