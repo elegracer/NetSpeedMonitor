@@ -19,7 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let launcherAppId = "elegracer.NetSpeedMonitorHelper" as String
     let keyIsStartAtLogin = "isStartAtLogin" as String
     let keyUpdateInteval = "updateInteval" as String
-    
+
     @IBOutlet var menu: NSMenu!
     @IBOutlet var startAtLoginMenuItem: NSMenuItem!
     @IBAction func onPressStartAtLoginMenuItem(_ sender: NSMenuItem) {
@@ -33,10 +33,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     @IBOutlet var quitButton: NSMenuItem!
     @IBAction func onPressQuitMenuItem(_ sender: NSMenuItem) {
-        print("isStartAtLogin: ", UserDefaults.standard.bool(forKey: keyIsStartAtLogin), ", updateInteval: ", UserDefaults.standard.integer(forKey: keyUpdateInteval))
+        print(
+            "isStartAtLogin: ", UserDefaults.standard.bool(forKey: keyIsStartAtLogin),
+            ", updateInteval: ", UserDefaults.standard.integer(forKey: keyUpdateInteval))
         NSApplication.shared.terminate(sender)
     }
-    
+
     @IBOutlet var updateInteval1sMenuItem: NSMenuItem!
     @IBOutlet var updateInteval2sMenuItem: NSMenuItem!
     @IBOutlet var updateInteval4sMenuItem: NSMenuItem!
@@ -46,13 +48,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.updateInteval1sMenuItem,
             self.updateInteval2sMenuItem,
             self.updateInteval4sMenuItem,
-            self.updateInteval8sMenuItem
+            self.updateInteval8sMenuItem,
         ]
     }
-    
+
     var updateIntevalInSec = 1.0
-    let validUpdateIntevals : [Int] = [1, 2, 4, 8]
-    
+    let validUpdateIntevals: [Int] = [1, 2, 4, 8]
+
     func onClickUpdateIntevalMenuItem(_ sender: NSMenuItem, value: Int) {
         updateIntevalInSec = Double(value)
         for updateIntevalMenuItem in updateIntevalMenuItemCollection {
@@ -62,7 +64,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(value, forKey: keyUpdateInteval)
         resetTimer()
     }
-    
+
     @IBAction func onClickUpdateInteval1s(_ sender: NSMenuItem) {
         onClickUpdateIntevalMenuItem(sender, value: 1)
     }
@@ -75,67 +77,71 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @IBAction func onClickUpdateInteval8s(_ sender: NSMenuItem) {
         onClickUpdateIntevalMenuItem(sender, value: 8)
     }
-    
+
     var uploadSpeed: Double = 0.0
     var downloadSpeed: Double = 0.0
     var uploadMetric: String = " B"
     var downloadMetric: String = " B"
-    
+
     let speedMetrics: [String] = [" B", "KB", "MB", "GB"]
-    
+
     var statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    
+
     var primaryInterface: String?
-    var netStat: NetSpeedStat!
+    var netTrafficStat: NetTrafficStatReceiver!
     var timer: Timer!
-    
-    var statusBarTextAttributes : [NSAttributedString.Key : Any] {
+
+    var statusBarTextAttributes: [NSAttributedString.Key: Any] {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .right
         paragraphStyle.maximumLineHeight = 10
         paragraphStyle.paragraphSpacing = -5
-        var map = [NSAttributedString.Key : Any]()
+        var map = [NSAttributedString.Key: Any]()
         map[NSAttributedString.Key.font] = NSFont(name: "SFMono-Semibold", size: 8)!
         map[NSAttributedString.Key.baselineOffset] = -5
         map[NSAttributedString.Key.paragraphStyle] = paragraphStyle
         return map
     }
-    
+
     func findPrimaryInterface() -> String? {
         let storeRef = SCDynamicStoreCreate(nil, "FindCurrentInterfaceIpMac" as CFString, nil, nil)
         let global = SCDynamicStoreCopyValue(storeRef, "State:/Network/Global/IPv4" as CFString)
         let primaryInterface = global?.value(forKey: "PrimaryInterface") as? String
         return primaryInterface
     }
-    
+
     func updateSpeed() {
         if let button = statusItem.button {
-            button.attributedTitle = NSAttributedString(string: "\n\(String(format: "%6.2lf", uploadSpeed)) \(uploadMetric)/s ↑\n\(String(format: "%6.2lf", downloadSpeed)) \(downloadMetric)/s ↓", attributes: statusBarTextAttributes)
+            button.attributedTitle = NSAttributedString(
+                string:
+                    "\n\(String(format: "%6.2lf", uploadSpeed)) \(uploadMetric)/s ↑\n\(String(format: "%6.2lf", downloadSpeed)) \(downloadMetric)/s ↓",
+                attributes: statusBarTextAttributes)
         }
     }
-    
+
     func startRepeatTimer() {
-        self.timer = Timer.scheduledTimer(withTimeInterval: updateIntevalInSec, repeats: true) { _ in
-            if (self.netStat == nil) {
-                self.netStat = NetSpeedStat()
+        self.timer = Timer.scheduledTimer(withTimeInterval: updateIntevalInSec, repeats: true) {
+            _ in
+            if self.netTrafficStat == nil {
+                self.netTrafficStat = NetTrafficStatReceiver()
                 self.downloadSpeed = 0.0
                 self.downloadMetric = " B"
                 self.uploadSpeed = 0.0
                 self.uploadMetric = " B"
                 return
             }
-            
-            if let statResult = self.netStat.getStatsForInterval(self.updateIntevalInSec) as NSDictionary? {
-                if (self.primaryInterface == nil) {
-                    self.primaryInterface = self.findPrimaryInterface();
-                    if (self.primaryInterface == nil) {
+
+            if let statResult = self.netTrafficStat.getNetTrafficStatMap() as NSMutableDictionary? {
+                if self.primaryInterface == nil {
+                    self.primaryInterface = self.findPrimaryInterface()
+                    if self.primaryInterface == nil {
                         return
                     }
                 }
-                if let dict = statResult.object(forKey: self.primaryInterface!) {
-                    let list = dict as! Dictionary<String, UInt64>
-                    self.downloadSpeed = Double(list["deltain"] ?? 0) / self.updateIntevalInSec
-                    self.uploadSpeed = Double(list["deltaout"] ?? 0) / self.updateIntevalInSec
+                if let object = statResult.object(forKey: self.primaryInterface!) {
+                    let netTrafficStatOC = object as! NetTrafficStatOC
+                    self.downloadSpeed = netTrafficStatOC.ibytes_per_sec as! Double
+                    self.uploadSpeed = netTrafficStatOC.obytes_per_sec as! Double
                     self.downloadMetric = self.speedMetrics.first!
                     self.uploadMetric = self.speedMetrics.first!
                     for metric in self.speedMetrics.dropFirst() {
@@ -149,41 +155,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         }
                     }
                     self.updateSpeed()
-                    print("deltaIn: \(self.downloadSpeed) \(self.downloadMetric)/s, deltaOut: \(self.uploadSpeed) \(self.uploadMetric)/s")
+                    print(
+                        "deltaIn: \(String(format:"%.6f", self.downloadSpeed)) \(self.downloadMetric)/s, deltaOut: \(String(format:"%.6f", self.uploadSpeed)) \(self.uploadMetric)/s"
+                    )
                 }
             }
-            
+
         }
         RunLoop.current.add(self.timer, forMode: .common)
     }
-    
+
     func resetTimer() {
         if self.timer != nil {
             self.timer.invalidate()
         }
         startRepeatTimer()
     }
-    
+
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         let runningApps = NSWorkspace.shared.runningApplications
         let isRunning = runningApps.contains { $0.bundleIdentifier == self.launcherAppId }
 
         if isRunning {
-            DistributedNotificationCenter.default().post(name: .killLauncher, object: Bundle.main.bundleIdentifier!)
+            DistributedNotificationCenter.default().post(
+                name: .killLauncher, object: Bundle.main.bundleIdentifier!)
         }
-        
+
         statusItem.length = 75
         statusItem.menu = menu
-        startAtLoginMenuItem.state = UserDefaults.standard.bool(forKey: keyIsStartAtLogin) ? .on : .off
-        
+        startAtLoginMenuItem.state =
+        UserDefaults.standard.bool(forKey: keyIsStartAtLogin) ? .on : .off
+
         let savedUpdateInteval = UserDefaults.standard.integer(forKey: keyUpdateInteval)
         if self.validUpdateIntevals.contains(savedUpdateInteval) {
             let index = self.validUpdateIntevals.firstIndex(of: savedUpdateInteval)!
-            onClickUpdateIntevalMenuItem(updateIntevalMenuItemCollection[index], value: validUpdateIntevals[index])
+            onClickUpdateIntevalMenuItem(
+                updateIntevalMenuItemCollection[index], value: validUpdateIntevals[index])
         } else {
-            onClickUpdateIntevalMenuItem(updateIntevalMenuItemCollection[0], value: validUpdateIntevals[0])
+            onClickUpdateIntevalMenuItem(
+                updateIntevalMenuItemCollection[0], value: validUpdateIntevals[0])
         }
-        
+
         updateSpeed()
     }
 }

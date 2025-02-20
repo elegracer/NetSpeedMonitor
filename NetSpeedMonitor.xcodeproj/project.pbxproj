@@ -7,12 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2B1463DF2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2B1463DE2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp */; };
 		370BAA1122341CA400243B91 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370BAA1022341CA400243B91 /* AppDelegate.swift */; };
 		370BAA1322341CA400243B91 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370BAA1222341CA400243B91 /* ViewController.swift */; };
 		370BAA1522341CA500243B91 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1422341CA500243B91 /* Assets.xcassets */; };
 		370BAA1822341CA500243B91 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1622341CA500243B91 /* Main.storyboard */; };
 		374AB278243C72E3008D0C10 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = 374AB277243C72E3008D0C10 /* Fonts */; };
-		375233892426224500A317FA /* NetSpeedStat.m in Sources */ = {isa = PBXBuildFile; fileRef = 375233882426224500A317FA /* NetSpeedStat.m */; };
+		375233892426224500A317FA /* NetTrafficStatOC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 375233882426224500A317FA /* NetTrafficStatOC.mm */; };
 		37B00A942405510300BD2C77 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B00A932405510300BD2C77 /* AppDelegate.swift */; };
 		37B00A982405510300BD2C77 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 37B00A972405510300BD2C77 /* Assets.xcassets */; };
 		37B00A9B2405510300BD2C77 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 37B00A992405510300BD2C77 /* Main.storyboard */; };
@@ -33,6 +34,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2B1463DD2D66D77D00B9AE9B /* NetTrafficStatSysctl.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = NetTrafficStatSysctl.hpp; sourceTree = "<group>"; };
+		2B1463DE2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NetTrafficStatSysctl.cpp; sourceTree = "<group>"; };
 		370BAA0D22341CA400243B91 /* NetSpeedMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetSpeedMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		370BAA1022341CA400243B91 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		370BAA1222341CA400243B91 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -42,8 +45,8 @@
 		370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NetSpeedMonitor.entitlements; sourceTree = "<group>"; };
 		374AB277243C72E3008D0C10 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fonts; sourceTree = "<group>"; };
 		375233862426224500A317FA /* NetSpeedMonitor-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NetSpeedMonitor-Bridging-Header.h"; sourceTree = "<group>"; };
-		375233872426224500A317FA /* NetSpeedStat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetSpeedStat.h; sourceTree = "<group>"; };
-		375233882426224500A317FA /* NetSpeedStat.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NetSpeedStat.m; sourceTree = "<group>"; };
+		375233872426224500A317FA /* NetTrafficStatOC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetTrafficStatOC.h; sourceTree = "<group>"; };
+		375233882426224500A317FA /* NetTrafficStatOC.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NetTrafficStatOC.mm; sourceTree = "<group>"; };
 		37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetSpeedMonitorHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		37B00A932405510300BD2C77 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		37B00A972405510300BD2C77 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -98,9 +101,11 @@
 				370BAA1622341CA500243B91 /* Main.storyboard */,
 				370BAA1922341CA500243B91 /* Info.plist */,
 				370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */,
-				375233872426224500A317FA /* NetSpeedStat.h */,
-				375233882426224500A317FA /* NetSpeedStat.m */,
+				375233872426224500A317FA /* NetTrafficStatOC.h */,
+				375233882426224500A317FA /* NetTrafficStatOC.mm */,
 				375233862426224500A317FA /* NetSpeedMonitor-Bridging-Header.h */,
+				2B1463DD2D66D77D00B9AE9B /* NetTrafficStatSysctl.hpp */,
+				2B1463DE2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp */,
 			);
 			path = NetSpeedMonitor;
 			sourceTree = "<group>";
@@ -227,7 +232,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				370BAA1322341CA400243B91 /* ViewController.swift in Sources */,
-				375233892426224500A317FA /* NetSpeedStat.m in Sources */,
+				2B1463DF2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp in Sources */,
+				375233892426224500A317FA /* NetTrafficStatOC.mm in Sources */,
 				370BAA1122341CA400243B91 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -390,6 +396,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_STANDARD_LIBRARY_HARDENING = fast;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitor/NetSpeedMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "-";
@@ -408,6 +415,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "NetSpeedMonitor/NetSpeedMonitor-Bridging-Header.h";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -417,6 +425,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_STANDARD_LIBRARY_HARDENING = fast;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitor/NetSpeedMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "-";
@@ -435,6 +444,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "NetSpeedMonitor/NetSpeedMonitor-Bridging-Header.h";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
