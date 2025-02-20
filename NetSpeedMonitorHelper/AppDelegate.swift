@@ -31,9 +31,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             let newPath = NSString.path(withComponents: components)
 
-            NSWorkspace.shared.launchApplication(newPath)
-//            let fileURL = URL(fileURLWithPath: newPath)
-//            NSWorkspace.shared.openApplication(at: fileURL, configuration: NSWorkspace.OpenConfiguration() )
+            // NSWorkspace.shared.launchApplication(newPath)
+            let url = URL(fileURLWithPath: newPath, isDirectory: true)
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
         } else {
             self.terminate()
         }
