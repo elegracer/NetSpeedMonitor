@@ -22,33 +22,54 @@ jobs:
           -project NetSpeedMonitor.xcodeproj \
           -scheme NetSpeedMonitor \
           -configuration Release \
+          ARCHS="x86_64 arm64" \
+          ONLY_ACTIVE_ARCH=NO \
+          -destination 'generic/platform=macOS' \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           CONFIGURATION_BUILD_DIR=build/Release \
           clean build
 
-    - name: Ad-hoc Code Signing
+    - name: Verify Architectures
       run: |
-        codesign --force --deep --sign - "build/Release/NetSpeedMonitor.app"
+        EXECUTABLE="build/Release/NetSpeedMonitor.app/Contents/MacOS/NetSpeedMonitor"
+        LIPO_OUTPUT=$(lipo -info "$EXECUTABLE")
+        echo "Binary Architectures: $LIPO_OUTPUT"
+        if [[ ! $LIPO_OUTPUT == *"x86_64"* || ! $LIPO_OUTPUT == *"arm64"* ]]; then
+          echo "::error::Missing required architectures!"
+          exit 1
+        fi
 
-    - name: Remove Attributes
+    - name: Sign Universal Binary
+      run: |
+        codesign --force --deep --sign - \
+          --options=runtime \
+          --timestamp \
+          "build/Release/NetSpeedMonitor.app"
+
+    - name: Sanitize Metadata
       run: |
         xattr -cr "build/Release/NetSpeedMonitor.app"
         xattr -r -d com.apple.quarantine "build/Release/NetSpeedMonitor.app"
         xattr -r -d com.apple.metadata:kMDItemWhereFroms "build/Release/NetSpeedMonitor.app"
+        plutil -replace CFBundleSupportedPlatforms -json '["MacOSX"]' \
+          "build/Release/NetSpeedMonitor.app/Contents/Info.plist"
 
-    - name: Package .app to .zip
+    - name: Create Distribution Package
       run: |
         cd build/Release
-        zip -r NetSpeedMonitor.zip NetSpeedMonitor.app
+        ditto -c -k --keepParent NetSpeedMonitor.app NetSpeedMonitor.zip
+        shasum -a 256 NetSpeedMonitor.zip > NetSpeedMonitor.sha256
 
     - name: Upload Artifacts (Master)
       if: github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v4
       with:
-        name: build-${{ github.sha }}
-        path: build/
+        name: universal-build-${{ github.sha }}
+        path: |
+          build/Release/NetSpeedMonitor.zip
+          build/Release/NetSpeedMonitor.sha256
 
     - name: Create Release Draft
       if: startsWith(github.ref, 'refs/tags/v')
@@ -58,6 +79,6 @@ jobs:
         body_path: RELEASE_NOTES.MD
         files: |
           build/Release/NetSpeedMonitor.zip
-          build/Release/NetSpeedMonitor.app
+          build/Release/NetSpeedMonitor.sha256
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
