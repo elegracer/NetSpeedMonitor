@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXFileReference section */
@@ -11,7 +11,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		2B1464C62D69913400B9AE9B /* Exceptions for "NetSpeedMonitor" folder in "NetSpeedMonitor" target */ = {
+		2B1464C62D69913400B9AE9B /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -21,14 +21,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		2B1464592D68CCD300B9AE9B /* NetSpeedMonitor */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				2B1464C62D69913400B9AE9B /* Exceptions for "NetSpeedMonitor" folder in "NetSpeedMonitor" target */,
-			);
-			path = NetSpeedMonitor;
-			sourceTree = "<group>";
-		};
+		2B1464592D68CCD300B9AE9B /* NetSpeedMonitor */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (2B1464C62D69913400B9AE9B /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = NetSpeedMonitor; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +93,7 @@
 				};
 			};
 			buildConfigurationList = 2B1464522D68CCD300B9AE9B /* Build configuration list for PBXProject "NetSpeedMonitor" */;
+			compatibilityVersion = "Xcode 15.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -108,7 +102,6 @@
 			);
 			mainGroup = 2B14644E2D68CCD300B9AE9B;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = 2B1464582D68CCD300B9AE9B /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -192,7 +185,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -249,7 +242,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -271,7 +264,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"NetSpeedMonitor/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
-				GCC_C_LANGUAGE_STANDARD = c17;
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NetSpeedMonitor/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -280,7 +273,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -306,7 +299,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"NetSpeedMonitor/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
-				GCC_C_LANGUAGE_STANDARD = c17;
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NetSpeedMonitor/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -315,7 +308,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
