@@ -30,7 +30,7 @@ class MenuBarState: ObservableObject {
     @AppStorage("NetSpeedUpdateInterval") var netSpeedUpdateInterval: NetSpeedUpdateInterval = .Sec1 {
         didSet { updateNetSpeedUpdateIntervalStatus() }
     }
-    @Published var menuText = "↑ \(String(format: "%6.2lf", 0)) \("B")/s\n↓ \(String(format: "%6.2lf", 0)) \("B")/s"
+    @Published var menuText = "↑ \(String(format: "%6.2lf", 0)) \(" B")/s\n↓ \(String(format: "%6.2lf", 0)) \(" B")/s"
     
     var currentIcon: NSImage {
         return MenuBarIconGenerator.generateIcon(text: menuText)
