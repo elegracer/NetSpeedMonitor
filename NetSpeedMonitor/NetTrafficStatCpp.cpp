@@ -1,4 +1,4 @@
-#include "NetTrafficStatSysctl.hpp"
+#include "NetTrafficStatCpp.hpp"
 
 #include <net/if.h>
 #include <net/if_dl.h>

@@ -1,6 +1,6 @@
 #import "NetTrafficStatOC.h"
 
-#import "NetTrafficStatSysctl.hpp"
+#import "NetTrafficStatCpp.hpp"
 
 @implementation NetTrafficStatOC
 @end

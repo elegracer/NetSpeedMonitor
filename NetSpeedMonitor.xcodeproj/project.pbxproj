@@ -3,67 +3,36 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		2B1463DF2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2B1463DE2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp */; };
-		370BAA1122341CA400243B91 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370BAA1022341CA400243B91 /* AppDelegate.swift */; };
-		370BAA1322341CA400243B91 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370BAA1222341CA400243B91 /* ViewController.swift */; };
-		370BAA1522341CA500243B91 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1422341CA500243B91 /* Assets.xcassets */; };
-		370BAA1822341CA500243B91 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 370BAA1622341CA500243B91 /* Main.storyboard */; };
-		374AB278243C72E3008D0C10 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = 374AB277243C72E3008D0C10 /* Fonts */; };
-		375233892426224500A317FA /* NetTrafficStatOC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 375233882426224500A317FA /* NetTrafficStatOC.mm */; };
-		37B00A942405510300BD2C77 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B00A932405510300BD2C77 /* AppDelegate.swift */; };
-		37B00A982405510300BD2C77 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 37B00A972405510300BD2C77 /* Assets.xcassets */; };
-		37B00A9B2405510300BD2C77 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 37B00A992405510300BD2C77 /* Main.storyboard */; };
-		37B00AA42405520400BD2C77 /* NetSpeedMonitorHelper.app in CopyFiles */ = {isa = PBXBuildFile; fileRef = 37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-/* End PBXBuildFile section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		37B00AA3240551FB00BD2C77 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/Library/LoginItems;
-			dstSubfolderSpec = 1;
-			files = (
-				37B00AA42405520400BD2C77 /* NetSpeedMonitorHelper.app in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
-		2B1463DD2D66D77D00B9AE9B /* NetTrafficStatSysctl.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = NetTrafficStatSysctl.hpp; sourceTree = "<group>"; };
-		2B1463DE2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NetTrafficStatSysctl.cpp; sourceTree = "<group>"; };
-		370BAA0D22341CA400243B91 /* NetSpeedMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetSpeedMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		370BAA1022341CA400243B91 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		370BAA1222341CA400243B91 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		370BAA1422341CA500243B91 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		370BAA1722341CA500243B91 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		370BAA1922341CA500243B91 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NetSpeedMonitor.entitlements; sourceTree = "<group>"; };
-		374AB277243C72E3008D0C10 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fonts; sourceTree = "<group>"; };
-		375233862426224500A317FA /* NetSpeedMonitor-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NetSpeedMonitor-Bridging-Header.h"; sourceTree = "<group>"; };
-		375233872426224500A317FA /* NetTrafficStatOC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NetTrafficStatOC.h; sourceTree = "<group>"; };
-		375233882426224500A317FA /* NetTrafficStatOC.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NetTrafficStatOC.mm; sourceTree = "<group>"; };
-		37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetSpeedMonitorHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		37B00A932405510300BD2C77 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		37B00A972405510300BD2C77 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		37B00A9A2405510300BD2C77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		37B00A9C2405510300BD2C77 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		37B00A9D2405510300BD2C77 /* NetSpeedMonitorHelper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NetSpeedMonitorHelper.entitlements; sourceTree = "<group>"; };
+		2B1464572D68CCD300B9AE9B /* NetSpeedMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetSpeedMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFrameworksBuildPhase section */
-		370BAA0A22341CA400243B91 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2B1464C62D69913400B9AE9B /* Exceptions for "NetSpeedMonitor" folder in "NetSpeedMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+			target = 2B1464562D68CCD300B9AE9B /* NetSpeedMonitor */;
 		};
-		37B00A8E2405510300BD2C77 /* Frameworks */ = {
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		2B1464592D68CCD300B9AE9B /* NetSpeedMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2B1464C62D69913400B9AE9B /* Exceptions for "NetSpeedMonitor" folder in "NetSpeedMonitor" target */,
+			);
+			path = NetSpeedMonitor;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2B1464542D68CCD300B9AE9B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -73,202 +42,104 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		370BAA0422341CA400243B91 = {
+		2B14644E2D68CCD300B9AE9B = {
 			isa = PBXGroup;
 			children = (
-				370BAA0F22341CA400243B91 /* NetSpeedMonitor */,
-				37B00A922405510300BD2C77 /* NetSpeedMonitorHelper */,
-				370BAA0E22341CA400243B91 /* Products */,
+				2B1464592D68CCD300B9AE9B /* NetSpeedMonitor */,
+				2B1464582D68CCD300B9AE9B /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		370BAA0E22341CA400243B91 /* Products */ = {
+		2B1464582D68CCD300B9AE9B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				370BAA0D22341CA400243B91 /* NetSpeedMonitor.app */,
-				37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */,
+				2B1464572D68CCD300B9AE9B /* NetSpeedMonitor.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		370BAA0F22341CA400243B91 /* NetSpeedMonitor */ = {
-			isa = PBXGroup;
-			children = (
-				374AB277243C72E3008D0C10 /* Fonts */,
-				370BAA1022341CA400243B91 /* AppDelegate.swift */,
-				370BAA1222341CA400243B91 /* ViewController.swift */,
-				370BAA1422341CA500243B91 /* Assets.xcassets */,
-				370BAA1622341CA500243B91 /* Main.storyboard */,
-				370BAA1922341CA500243B91 /* Info.plist */,
-				370BAA1A22341CA500243B91 /* NetSpeedMonitor.entitlements */,
-				375233872426224500A317FA /* NetTrafficStatOC.h */,
-				375233882426224500A317FA /* NetTrafficStatOC.mm */,
-				375233862426224500A317FA /* NetSpeedMonitor-Bridging-Header.h */,
-				2B1463DD2D66D77D00B9AE9B /* NetTrafficStatSysctl.hpp */,
-				2B1463DE2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp */,
-			);
-			path = NetSpeedMonitor;
-			sourceTree = "<group>";
-		};
-		37B00A922405510300BD2C77 /* NetSpeedMonitorHelper */ = {
-			isa = PBXGroup;
-			children = (
-				37B00A932405510300BD2C77 /* AppDelegate.swift */,
-				37B00A972405510300BD2C77 /* Assets.xcassets */,
-				37B00A992405510300BD2C77 /* Main.storyboard */,
-				37B00A9C2405510300BD2C77 /* Info.plist */,
-				37B00A9D2405510300BD2C77 /* NetSpeedMonitorHelper.entitlements */,
-			);
-			path = NetSpeedMonitorHelper;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		370BAA0C22341CA400243B91 /* NetSpeedMonitor */ = {
+		2B1464562D68CCD300B9AE9B /* NetSpeedMonitor */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 370BAA1D22341CA500243B91 /* Build configuration list for PBXNativeTarget "NetSpeedMonitor" */;
+			buildConfigurationList = 2B1464662D68CCD400B9AE9B /* Build configuration list for PBXNativeTarget "NetSpeedMonitor" */;
 			buildPhases = (
-				370BAA0922341CA400243B91 /* Sources */,
-				370BAA0A22341CA400243B91 /* Frameworks */,
-				370BAA0B22341CA400243B91 /* Resources */,
-				37B00AA3240551FB00BD2C77 /* CopyFiles */,
+				2B1464532D68CCD300B9AE9B /* Sources */,
+				2B1464542D68CCD300B9AE9B /* Frameworks */,
+				2B1464552D68CCD300B9AE9B /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2B1464592D68CCD300B9AE9B /* NetSpeedMonitor */,
 			);
 			name = NetSpeedMonitor;
+			packageProductDependencies = (
+			);
 			productName = NetSpeedMonitor;
-			productReference = 370BAA0D22341CA400243B91 /* NetSpeedMonitor.app */;
-			productType = "com.apple.product-type.application";
-		};
-		37B00A902405510300BD2C77 /* NetSpeedMonitorHelper */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 37B00AA02405510300BD2C77 /* Build configuration list for PBXNativeTarget "NetSpeedMonitorHelper" */;
-			buildPhases = (
-				37B00A8D2405510300BD2C77 /* Sources */,
-				37B00A8E2405510300BD2C77 /* Frameworks */,
-				37B00A8F2405510300BD2C77 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = NetSpeedMonitorHelper;
-			productName = NetSpeedMonitorHelper;
-			productReference = 37B00A912405510300BD2C77 /* NetSpeedMonitorHelper.app */;
+			productReference = 2B1464572D68CCD300B9AE9B /* NetSpeedMonitor.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		370BAA0522341CA400243B91 /* Project object */ = {
+		2B14644F2D68CCD300B9AE9B /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				BuildIndependentTargetsInParallel = YES;
-				LastSwiftUpdateCheck = 1130;
-				LastUpgradeCheck = 1610;
-				ORGANIZATIONNAME = "Team Elegracer";
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
 				TargetAttributes = {
-					370BAA0C22341CA400243B91 = {
-						CreatedOnToolsVersion = 10.1;
-						LastSwiftMigration = 1130;
-						SystemCapabilities = {
-							com.apple.Sandbox = {
-								enabled = 0;
-							};
-						};
-					};
-					37B00A902405510300BD2C77 = {
-						CreatedOnToolsVersion = 11.3.1;
+					2B1464562D68CCD300B9AE9B = {
+						CreatedOnToolsVersion = 16.2;
+						LastSwiftMigration = 1620;
 					};
 				};
 			};
-			buildConfigurationList = 370BAA0822341CA400243B91 /* Build configuration list for PBXProject "NetSpeedMonitor" */;
-			compatibilityVersion = "Xcode 9.3";
+			buildConfigurationList = 2B1464522D68CCD300B9AE9B /* Build configuration list for PBXProject "NetSpeedMonitor" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = 370BAA0422341CA400243B91;
-			productRefGroup = 370BAA0E22341CA400243B91 /* Products */;
+			mainGroup = 2B14644E2D68CCD300B9AE9B;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2B1464582D68CCD300B9AE9B /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				370BAA0C22341CA400243B91 /* NetSpeedMonitor */,
-				37B00A902405510300BD2C77 /* NetSpeedMonitorHelper */,
+				2B1464562D68CCD300B9AE9B /* NetSpeedMonitor */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		370BAA0B22341CA400243B91 /* Resources */ = {
+		2B1464552D68CCD300B9AE9B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				374AB278243C72E3008D0C10 /* Fonts in Resources */,
-				370BAA1522341CA500243B91 /* Assets.xcassets in Resources */,
-				370BAA1822341CA500243B91 /* Main.storyboard in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		37B00A8F2405510300BD2C77 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				37B00A982405510300BD2C77 /* Assets.xcassets in Resources */,
-				37B00A9B2405510300BD2C77 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		370BAA0922341CA400243B91 /* Sources */ = {
+		2B1464532D68CCD300B9AE9B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				370BAA1322341CA400243B91 /* ViewController.swift in Sources */,
-				2B1463DF2D66D77D00B9AE9B /* NetTrafficStatSysctl.cpp in Sources */,
-				375233892426224500A317FA /* NetTrafficStatOC.mm in Sources */,
-				370BAA1122341CA400243B91 /* AppDelegate.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		37B00A8D2405510300BD2C77 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				37B00A942405510300BD2C77 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXVariantGroup section */
-		370BAA1622341CA500243B91 /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				370BAA1722341CA500243B91 /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-		37B00A992405510300BD2C77 /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				37B00A9A2405510300BD2C77 /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
-
 /* Begin XCBuildConfiguration section */
-		370BAA1B22341CA500243B91 /* Debug */ = {
+		2B1464642D68CCD400B9AE9B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -276,7 +147,6 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
-				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -302,14 +172,12 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = c11;
+				GCC_C_LANGUAGE_STANDARD = c17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -323,17 +191,18 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
-		370BAA1C22341CA500243B91 /* Release */ = {
+		2B1464652D68CCD400B9AE9B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -341,7 +210,6 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
-				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -367,53 +235,56 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = c11;
+				GCC_C_LANGUAGE_STANDARD = c17;
 				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
 			};
 			name = Release;
 		};
-		370BAA1E22341CA500243B91 /* Debug */ = {
+		2B1464672D68CCD400B9AE9B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_CXX_STANDARD_LIBRARY_HARDENING = fast;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitor/NetSpeedMonitor.entitlements;
-				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"NetSpeedMonitor/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GCC_C_LANGUAGE_STANDARD = c17;
+				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NetSpeedMonitor/Info.plist;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				MARKETING_VERSION = 1.6;
-				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "NetSpeedMonitor/NetSpeedMonitor-Bridging-Header.h";
 				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -421,78 +292,36 @@
 			};
 			name = Debug;
 		};
-		370BAA1F22341CA500243B91 /* Release */ = {
+		2B1464682D68CCD400B9AE9B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_CXX_STANDARD_LIBRARY_HARDENING = fast;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitor/NetSpeedMonitor.entitlements;
-				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"NetSpeedMonitor/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GCC_C_LANGUAGE_STANDARD = c17;
+				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NetSpeedMonitor/Info.plist;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				MARKETING_VERSION = 1.6;
-				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitor;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.elegracer.NetSpeedMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "NetSpeedMonitor/NetSpeedMonitor-Bridging-Header.h";
 				SWIFT_OBJC_INTEROP_MODE = objcxx;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
-		37B00A9E2405510300BD2C77 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitorHelper/NetSpeedMonitorHelper.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = YES;
-				INFOPLIST_FILE = NetSpeedMonitorHelper/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitorHelper;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		37B00A9F2405510300BD2C77 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = NetSpeedMonitorHelper/NetSpeedMonitorHelper.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = YES;
-				INFOPLIST_FILE = NetSpeedMonitorHelper/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = elegracer.NetSpeedMonitorHelper;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -500,34 +329,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		370BAA0822341CA400243B91 /* Build configuration list for PBXProject "NetSpeedMonitor" */ = {
+		2B1464522D68CCD300B9AE9B /* Build configuration list for PBXProject "NetSpeedMonitor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				370BAA1B22341CA500243B91 /* Debug */,
-				370BAA1C22341CA500243B91 /* Release */,
+				2B1464642D68CCD400B9AE9B /* Debug */,
+				2B1464652D68CCD400B9AE9B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		370BAA1D22341CA500243B91 /* Build configuration list for PBXNativeTarget "NetSpeedMonitor" */ = {
+		2B1464662D68CCD400B9AE9B /* Build configuration list for PBXNativeTarget "NetSpeedMonitor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				370BAA1E22341CA500243B91 /* Debug */,
-				370BAA1F22341CA500243B91 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		37B00AA02405510300BD2C77 /* Build configuration list for PBXNativeTarget "NetSpeedMonitorHelper" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				37B00A9E2405510300BD2C77 /* Debug */,
-				37B00A9F2405510300BD2C77 /* Release */,
+				2B1464672D68CCD400B9AE9B /* Debug */,
+				2B1464682D68CCD400B9AE9B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 370BAA0522341CA400243B91 /* Project object */;
+	rootObject = 2B14644F2D68CCD300B9AE9B /* Project object */;
 }

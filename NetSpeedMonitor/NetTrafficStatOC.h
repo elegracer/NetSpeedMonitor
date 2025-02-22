@@ -1,6 +1,8 @@
+#pragma once
+
 #import <Foundation/Foundation.h>
 
-#import "NetTrafficStatSysctl.hpp"
+#import "NetTrafficStatCpp.hpp"
 
 
 @interface NetTrafficStatOC : NSObject
