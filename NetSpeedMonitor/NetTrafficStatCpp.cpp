@@ -1,5 +1,6 @@
 #include "NetTrafficStatCpp.hpp"
 
+#include <limits>
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/route.h>
@@ -61,7 +62,7 @@ int NetTrafficStatGenerator::update() {
             net_traffic_stat.ifi_obytes = ifmsg->ifm_data.ifi_obytes;
             if (net_traffic_stat.ifi_ibytes < last_net_traffic_stat.ifi_ibytes) {
                 net_traffic_stat.delta_ibytes = static_cast<int64_t>(net_traffic_stat.ifi_ibytes)
-                                                + std::numeric_limits<uint32_t>::max()
+                                                + (static_cast<int64_t>(1) << 32)
                                                 - last_net_traffic_stat.ifi_ibytes;
             } else {
                 net_traffic_stat.delta_ibytes =
@@ -69,7 +70,7 @@ int NetTrafficStatGenerator::update() {
             }
             if (net_traffic_stat.ifi_obytes < last_net_traffic_stat.ifi_obytes) {
                 net_traffic_stat.delta_obytes = static_cast<int64_t>(net_traffic_stat.ifi_obytes)
-                                                + std::numeric_limits<uint32_t>::max()
+                                                + (static_cast<int64_t>(1) << 32)
                                                 - last_net_traffic_stat.ifi_obytes;
             } else {
                 net_traffic_stat.delta_obytes =
