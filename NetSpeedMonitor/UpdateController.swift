@@ -9,7 +9,11 @@ final class UpdateController: NSObject {
 
     private let appVersion: String
     private let githubRepo: String
-    private lazy var installer = UpdateInstaller(currentVersion: appVersion, currentAppPath: Bundle.main.bundlePath)
+    private lazy var installer = UpdateInstaller(
+        currentVersion: appVersion,
+        currentAppPath: Bundle.main.bundlePath,
+        currentProcessID: ProcessInfo.processInfo.processIdentifier
+    )
 
     private var window: NSWindow?
     private var titleLabel: NSTextField?
@@ -178,8 +182,11 @@ final class UpdateController: NSObject {
         }
         do {
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/bash")
-            process.arguments = [preparedUpdate.scriptURL.path]
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/nohup")
+            process.arguments = ["/bin/bash", preparedUpdate.scriptURL.path]
+            process.standardInput = FileHandle.nullDevice
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
             try process.run()
             NSApp.terminate(nil)
         } catch {

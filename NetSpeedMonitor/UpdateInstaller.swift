@@ -9,10 +9,12 @@ struct PreparedUpdate {
 final class UpdateInstaller {
     private let currentVersion: String
     private let currentAppPath: String
+    private let currentProcessID: Int32
 
-    init(currentVersion: String, currentAppPath: String) {
+    init(currentVersion: String, currentAppPath: String, currentProcessID: Int32) {
         self.currentVersion = currentVersion
         self.currentAppPath = currentAppPath
+        self.currentProcessID = currentProcessID
     }
 
     func prepare(
@@ -56,6 +58,7 @@ final class UpdateInstaller {
             let helperScript = workDirectory.appendingPathComponent("update.sh")
             let errorFile = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("com.elegracer.NetSpeedMonitor/update-error.txt")
+            let logFile = errorFile.deletingLastPathComponent().appendingPathComponent("update.log")
             let scriptContent = """
             #!/bin/bash
             set -u
@@ -65,6 +68,12 @@ final class UpdateInstaller {
             work_dir=\(shellQuote(workDirectory.path))
             backup_app="${current_app}.backup.$(/bin/date +%s)"
             error_file=\(shellQuote(errorFile.path))
+            log_file=\(shellQuote(logFile.path))
+            old_pid=\(currentProcessID)
+
+            /bin/mkdir -p "$(/usr/bin/dirname "$log_file")"
+            exec >>"$log_file" 2>&1
+            echo "Starting update from \(currentVersion) to \(downloadedVersion)"
 
             report_failure() {
                 /bin/mkdir -p "$(/usr/bin/dirname "$error_file")"
@@ -89,7 +98,16 @@ final class UpdateInstaller {
                 exit 1
             }
 
-            sleep 1
+            for attempt in {1..80}; do
+                if ! /bin/kill -0 "$old_pid" 2>/dev/null; then
+                    break
+                fi
+                sleep 0.25
+            done
+            if /bin/kill -0 "$old_pid" 2>/dev/null; then
+                fail_before_replace "NetSpeedMonitor did not quit before installation."
+            fi
+
             [ -d "$downloaded_app" ] || {
                 fail_before_replace "The downloaded application disappeared before installation."
             }
@@ -98,6 +116,7 @@ final class UpdateInstaller {
             }
 
             if [ -d "$current_app" ]; then
+                echo "Backing up $current_app"
                 /bin/mv "$current_app" "$backup_app" || {
                     report_failure "The installed application could not be moved for replacement."
                     /usr/bin/open "$current_app" >/dev/null 2>&1 || true
@@ -105,6 +124,7 @@ final class UpdateInstaller {
                 }
             fi
 
+            echo "Installing $downloaded_app"
             /usr/bin/ditto "$downloaded_app" "$current_app" || rollback "The new application could not be copied."
             /usr/bin/xattr -rd com.apple.quarantine "$current_app" 2>/dev/null || true
             /bin/chmod -R u+rwX,go+rX "$current_app" 2>/dev/null || true
@@ -113,7 +133,7 @@ final class UpdateInstaller {
             /usr/bin/open "$current_app" >/dev/null 2>&1 || rollback "The updated application could not be restarted."
             launched=0
             for attempt in {1..10}; do
-                if /usr/bin/pgrep -x NetSpeedMonitor >/dev/null 2>&1; then
+                if /usr/bin/pgrep -f -x "$current_app/Contents/MacOS/NetSpeedMonitor" >/dev/null 2>&1; then
                     launched=1
                     break
                 fi
@@ -121,6 +141,7 @@ final class UpdateInstaller {
             done
             [ "$launched" -eq 1 ] || rollback "The updated application exited immediately after launch."
 
+            echo "Update completed successfully"
             /bin/rm -f "$error_file"
             /bin/rm -rf "$backup_app"
             /bin/rm -rf "$work_dir"

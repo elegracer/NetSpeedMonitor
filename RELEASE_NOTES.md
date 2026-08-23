@@ -2,17 +2,13 @@
 
 ## What's New
 
-- Uses a single version source for local builds, CI artifacts, and releases.
-- Builds releases with the macOS 26 SDK for consistent Liquid Glass controls.
-- Adds automated tests for interval settings, version checks, checksums, and traffic counter wrap-around.
+- Adds persistent update installation logging for diagnostics.
 
 ## Fixes
 
-- Fixes the 60-second update interval incorrectly showing zero traffic.
-- Prevents stale traffic values after a statistics read failure.
-- Keeps automatic upload and download values on the same network interface.
-- Moves update verification and extraction off the main thread.
-- Strengthens update validation, rollback, restart checks, and failure reporting.
+- Waits for the running app process to exit before replacing the app bundle.
+- Runs the installer independently so it continues after NetSpeedMonitor quits.
+- Verifies the exact updated app process starts and rolls back on failure.
 
 ## Requirements
 
