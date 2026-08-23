@@ -5,20 +5,11 @@
 - Improves Check Update with a single in-window flow, download progress, and install confirmation.
 - Uses a GitHub release redirect flow to avoid GitHub API rate-limit failures.
 - Updates About and Check Update windows with a consistent material style.
-- Adds Check Update to install newer GitHub releases from the menu.
-- Adds About with the current version, GitHub link, and author.
-- Automatically follows the effective network interface when a VPN connects or disconnects.
-- Shows the interface selected by Auto mode, for example `Auto (utun4)`.
-- Adds an interface submenu with live upload and download rates.
-- Allows pinning the status display to a specific interface.
-- Replaces the SwiftUI menu with an AppKit implementation.
 
 ## Fixes
 
-- Fixes incorrect or zero traffic readings when a VPN changes the active route.
-- Removes stale interfaces when they disappear.
-- Correctly handles both download and upload 32-bit byte-counter wrap-around.
-- Avoids changing menu structure while the menu is open.
+- Shows update failures in the update window when checking, downloading, validating, or preparing installation fails.
+- Separates Check Update and About menu items to avoid incorrect menu-item status icons or indentation.
 
 ## Requirements
 
