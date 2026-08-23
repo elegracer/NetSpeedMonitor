@@ -1,14 +1,33 @@
-From v1.8, the UI is built using SwiftUI, on macOS 15, with minimum system version macOS 14.6.
+# NetSpeedMonitor v1.9
 
-Since I haven't successfully built it with lower version of github action runner images, it is what it is now. Later if I have the chance, I would make it compatible with lower version of macOS.
+## What's New
 
-Any PR for feature enhancement or compatibility improvement is welcomed!
+- Automatically follows the effective network interface when a VPN connects or disconnects.
+- Shows the interface selected by Auto mode, for example `Auto (utun4)`.
+- Adds an interface submenu with live upload and download rates.
+- Allows pinning the status display to a specific interface.
+- Replaces the SwiftUI menu with an AppKit implementation.
 
----
+## Fixes
 
-Now this app is automatically built with github actions. So it may require some processing before running.
-Run the following command to make the app runnable.
+- Fixes incorrect or zero traffic readings when a VPN changes the active route.
+- Removes stale interfaces when they disappear.
+- Correctly handles both download and upload 32-bit byte-counter wrap-around.
+- Avoids changing menu structure while the menu is open.
+
+## Requirements
+
+- macOS 14.6 or later.
+- Apple silicon and Intel Macs are supported by the universal build.
+
+## Install or Upgrade
+
+1. Download `NetSpeedMonitor.zip` below.
+2. Unzip it and move `NetSpeedMonitor.app` to `/Applications`, replacing the previous version when upgrading.
+3. If macOS blocks the ad-hoc signed app, run:
 
 ```bash
-sudo xattr -rd com.apple.quarantine ./NetSpeedMonitor.app
+sudo xattr -rd com.apple.quarantine /Applications/NetSpeedMonitor.app
 ```
+
+The app is ad-hoc signed by GitHub Actions and is not notarized with an Apple Developer ID.

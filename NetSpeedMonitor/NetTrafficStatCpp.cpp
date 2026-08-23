@@ -14,7 +14,6 @@ int NetTrafficStatGenerator::update() {
     if (sysctl(mib, 6, nullptr, &data_bytes, nullptr, 0) != 0) {
         return 1;
     }
-    //   std::cout << data_bytes << std::endl;
     if (sysctl_buffer.size() < data_bytes) {
         sysctl_buffer = std::vector<uint8_t>(data_bytes);
     }
@@ -25,6 +24,7 @@ int NetTrafficStatGenerator::update() {
     }
 
     const time_point_type tp_retrieval = clock_type::now();
+    std::set<std::string> seen_interfaces;
 
     uint8_t* const sysctl_buffer_ptr = sysctl_buffer.data();
     uint8_t* data_ptr_cur = sysctl_buffer_ptr;
@@ -54,12 +54,16 @@ int NetTrafficStatGenerator::update() {
             continue;
         }
 
+        seen_interfaces.insert(interface_name);
+        const bool is_up = (ifmsg->ifm_flags & IFF_UP) != 0;
+
         if (auto& net_traffic_stat = net_traffic_stat_map[interface_name]; //
-            net_traffic_stat.is_valid() && (ifmsg->ifm_flags & IFF_UP)) {
+            net_traffic_stat.is_valid() && is_up) {
             const auto last_net_traffic_stat = net_traffic_stat;
             net_traffic_stat.tp_retrieval = tp_retrieval;
             net_traffic_stat.ifi_ibytes = ifmsg->ifm_data.ifi_ibytes;
             net_traffic_stat.ifi_obytes = ifmsg->ifm_data.ifi_obytes;
+            net_traffic_stat.is_up = true;
             if (net_traffic_stat.ifi_ibytes < last_net_traffic_stat.ifi_ibytes) {
                 net_traffic_stat.delta_ibytes = static_cast<int64_t>(net_traffic_stat.ifi_ibytes)
                                                 + (static_cast<int64_t>(1) << 32)
@@ -92,6 +96,7 @@ int NetTrafficStatGenerator::update() {
             net_traffic_stat.tp_retrieval = tp_retrieval;
             net_traffic_stat.ifi_ibytes = ifmsg->ifm_data.ifi_ibytes;
             net_traffic_stat.ifi_obytes = ifmsg->ifm_data.ifi_obytes;
+            net_traffic_stat.is_up = is_up;
             net_traffic_stat.delta_ibytes = 0;
             net_traffic_stat.delta_obytes = 0;
             net_traffic_stat.total_ibytes = 0;
@@ -104,6 +109,15 @@ int NetTrafficStatGenerator::update() {
 
         // Continue on
         data_ptr_cur += ifmsg->ifm_msglen;
+    }
+
+    // Remove interfaces that are no longer present in this update
+    for (auto it = net_traffic_stat_map.begin(); it != net_traffic_stat_map.end(); ) {
+        if (seen_interfaces.find(it->first) == seen_interfaces.end()) {
+            it = net_traffic_stat_map.erase(it);
+        } else {
+            ++it;
+        }
     }
 
     return 0;

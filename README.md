@@ -1,25 +1,33 @@
 # NetSpeedMonitor
 
-Just a minimal menu bar macOS app.
+NetSpeedMonitor is a minimal menu bar app for macOS 14.6 and later. It reads per-interface byte counters with `sysctl` and displays current upload and download rates.
 
-It runs `sysctl` with c interface in a repeating timer.
-
-Use at your own risk.
-
-# Functions
+## Features
 
 1. Start at login.
-2. Set different update intervals, now with 5 options: 1s, 2s, 5s, 10s, 30s.
-3. Open Activity Monitor. When you notice abnormal network traffic, you could open Activity Monitor to check what process is the cause.
+2. Choose a 1s, 2s, 5s, 10s, or 30s update interval.
+3. Open Activity Monitor directly from the menu.
+4. Automatically follow the effective network interface when a VPN connects or disconnects.
+5. Inspect all active interfaces or pin the display to a specific interface.
 
-# Note
+## Install
 
-For per-process network traffic monitoring, it usually requires `nettop` which is quite cpu-heavy making it impractical to keep running at the background. Implementing it to run only when the user click the status item to make the menu showing may be a good choice.
+1. Download `NetSpeedMonitor.zip` from the latest GitHub release.
+2. Unzip it and move `NetSpeedMonitor.app` to `/Applications`.
+3. Open the app. If macOS blocks the ad-hoc signed build, run:
 
-From v1.8, the UI is built using SwiftUI, on macOS 15, with minimum system version macOS 14.6. Since I haven't successfully built it with lower version of github action runner images, it is what it is now. Later if I have the chance, I would make it compatible with lower version of macOS.
+```bash
+sudo xattr -rd com.apple.quarantine /Applications/NetSpeedMonitor.app
+```
 
-Any PR for feature enhancement or compatibility improvement is welcomed!
+To upgrade, quit NetSpeedMonitor and replace the existing app in `/Applications`.
 
-# Screenshot
+## VPN Behavior
+
+Automatic mode asks the macOS Network framework which interface carries traffic to a public IPv4 endpoint. This follows full-tunnel and route-based VPN changes without polling. Split-tunnel VPNs can route different destinations over different interfaces, so no single interface can represent every flow.
+
+Per-process traffic monitoring is intentionally not included because continuously running `nettop` has significantly higher CPU overhead.
+
+## Screenshot
 
 ![](./screenshot.png)

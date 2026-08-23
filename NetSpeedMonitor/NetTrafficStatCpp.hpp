@@ -3,6 +3,8 @@
 #include <map>
 #include <chrono>
 #include <vector>
+#include <set>
+#include <string>
 
 using clock_type = std::chrono::steady_clock;
 using duration_type = std::chrono::nanoseconds;
@@ -20,6 +22,7 @@ struct NetTrafficStat {
     int64_t delta_obytes = 0; // difference between 2 consecutive total_obytes
     double ibytes_per_sec = 0.0;
     double obytes_per_sec = 0.0;
+    bool is_up = false;
 
     bool is_valid() const { return tp_retrieval.time_since_epoch().count() > 0; }
 };

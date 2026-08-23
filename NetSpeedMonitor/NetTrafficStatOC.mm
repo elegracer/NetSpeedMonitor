@@ -36,10 +36,13 @@
         [NSNumber numberWithDouble:net_traffic_stat.delta_ts_sec];
         netTrafficStatsOC.delta_ibytes = net_traffic_stat.delta_ibytes;
         netTrafficStatsOC.delta_obytes = net_traffic_stat.delta_obytes;
+        netTrafficStatsOC.total_ibytes = net_traffic_stat.total_ibytes;
+        netTrafficStatsOC.total_obytes = net_traffic_stat.total_obytes;
         netTrafficStatsOC.ibytes_per_sec =
         [NSNumber numberWithDouble:net_traffic_stat.ibytes_per_sec];
         netTrafficStatsOC.obytes_per_sec =
         [NSNumber numberWithDouble:net_traffic_stat.obytes_per_sec];
+        netTrafficStatsOC.isUp = net_traffic_stat.is_up;
 
         NSString *key = [NSString stringWithCString:interface_name.c_str()
                                            encoding:NSASCIIStringEncoding];
