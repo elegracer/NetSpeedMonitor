@@ -2,6 +2,7 @@ import Cocoa
 import Network
 import ServiceManagement
 import os.log
+import CryptoKit
 
 let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "elegracer")
 
@@ -133,11 +134,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        let checkUpdateItem = NSMenuItem(title: "Check Update", action: #selector(checkUpdate(_:)), keyEquivalent: "")
+        checkUpdateItem.target = self
+        configurePlainMenuItem(checkUpdateItem)
+        menu.addItem(checkUpdateItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let aboutItem = NSMenuItem(title: "About", action: #selector(showAbout(_:)), keyEquivalent: "")
+        aboutItem.target = self
+        configurePlainMenuItem(aboutItem)
+        menu.addItem(aboutItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp(_:)), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
         statusItem.menu = menu
+    }
+
+    private func configurePlainMenuItem(_ item: NSMenuItem) {
+        item.image = nil
+        item.state = .off
+        item.indentationLevel = 0
+        item.onStateImage = nil
+        item.offStateImage = nil
+        item.mixedStateImage = nil
     }
 
     // MARK: - Settings
@@ -414,6 +438,282 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quitApp(_ sender: NSMenuItem) {
         NSApp.terminate(nil)
+    }
+
+    // MARK: - Check Update
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.9"
+    }
+
+    private var githubRepo: String { "elegracer/NetSpeedMonitor" }
+
+    @objc private func checkUpdate(_ sender: NSMenuItem) {
+        // Close the menu first to avoid run loop conflict with modal alerts
+        menu.cancelTracking()
+        performUpdateCheck()
+    }
+
+    private func performUpdateCheck() {
+        let urlString = "https://api.github.com/repos/\(githubRepo)/releases/latest"
+        guard let url = URL(string: urlString) else {
+            showAlert(title: "Update Check Failed", message: "Invalid GitHub API URL.")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 15
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+
+                if let error = error {
+                    self.showAlert(title: "Update Check Failed", message: "Network error: \(error.localizedDescription)")
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse,
+                      (200...299).contains(httpResponse.statusCode),
+                      let data = data else {
+                    self.showAlert(title: "Update Check Failed", message: "Unexpected server response.")
+                    return
+                }
+
+                do {
+                    guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                          let tagName = json["tag_name"] as? String else {
+                        self.showAlert(title: "Update Check Failed", message: "Failed to parse release data.")
+                        return
+                    }
+
+                    let latestVersion = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+                    let currentVersion = self.appVersion
+
+                    let comparison = currentVersion.compare(latestVersion, options: .numeric)
+                    if comparison == .orderedAscending {
+                        // New version available — ask to download
+                        let shouldUpdate = self.showQuestionAlert(
+                            title: "Update Available",
+                            message: "Version \(latestVersion) is available (current: \(currentVersion)).\nDownload and install now?"
+                        )
+                        if shouldUpdate {
+                            self.downloadAndInstallLatestRelease(from: json)
+                        }
+                    } else if comparison == .orderedSame {
+                        self.showAlert(title: "Up to Date", message: "You are running the latest version (\(currentVersion)).")
+                    } else {
+                        self.showAlert(title: "Up to Date",
+                                       message: "You are running version \(currentVersion), which is newer than the latest release (\(latestVersion)).")
+                    }
+                } catch {
+                    self.showAlert(title: "Update Check Failed", message: "Parse error: \(error.localizedDescription)")
+                }
+            }
+        }
+        task.resume()
+    }
+
+    private func downloadAndInstallLatestRelease(from json: [String: Any]) {
+        // Find the asset named NetSpeedMonitor.zip
+        guard let assets = json["assets"] as? [[String: Any]] else {
+            showAlert(title: "Update Failed", message: "No assets found in the release.")
+            return
+        }
+
+        guard let asset = assets.first(where: { ($0["name"] as? String) == "NetSpeedMonitor.zip" }),
+              let downloadURLString = asset["browser_download_url"] as? String,
+              let downloadURL = URL(string: downloadURLString) else {
+            showAlert(title: "Update Failed", message: "NetSpeedMonitor.zip asset not found in the release.")
+            return
+        }
+
+        let expectedDigest = asset["digest"] as? String
+
+        let downloadTask = URLSession.shared.downloadTask(with: downloadURL) { [weak self] tempURL, _, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+
+                if let error = error {
+                    self.showAlert(title: "Download Failed", message: "Could not download update: \(error.localizedDescription)")
+                    return
+                }
+
+                guard let tempURL = tempURL else {
+                    self.showAlert(title: "Download Failed", message: "No data received.")
+                    return
+                }
+
+                let fileManager = FileManager.default
+                let tmpDir = fileManager.temporaryDirectory
+                let unzipDir = tmpDir.appendingPathComponent("NetSpeedMonitorUpdate-\(UUID().uuidString)")
+
+                do {
+                    // Clean up any previous failed attempts
+                    if fileManager.fileExists(atPath: unzipDir.path) {
+                        try fileManager.removeItem(at: unzipDir)
+                    }
+                    try fileManager.createDirectory(at: unzipDir, withIntermediateDirectories: true)
+
+                    // Move downloaded zip to a stable location
+                    let zipPath = unzipDir.appendingPathComponent("NetSpeedMonitor.zip")
+                    if fileManager.fileExists(atPath: zipPath.path) {
+                        try fileManager.removeItem(at: zipPath)
+                    }
+                    try fileManager.moveItem(at: tempURL, to: zipPath)
+
+                    if let expectedDigest, expectedDigest.hasPrefix("sha256:") {
+                        let expectedSHA256 = String(expectedDigest.dropFirst("sha256:".count)).lowercased()
+                        let actualSHA256 = try self.sha256Hex(for: zipPath)
+                        guard actualSHA256 == expectedSHA256 else {
+                            throw NSError(domain: "UpdateError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Downloaded update failed checksum verification"])
+                        }
+                    }
+
+                    // Unzip
+                    let process = Process()
+                    process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+                    process.arguments = ["-o", zipPath.path, "-d", unzipDir.path]
+                    try process.run()
+                    process.waitUntilExit()
+
+                    guard process.terminationStatus == 0 else {
+                        throw NSError(domain: "UpdateError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unzip failed with status \(process.terminationStatus)"])
+                    }
+
+                    let downloadedApp = unzipDir.appendingPathComponent("NetSpeedMonitor.app")
+                    guard fileManager.fileExists(atPath: downloadedApp.path) else {
+                        throw NSError(domain: "UpdateError", code: 2, userInfo: [NSLocalizedDescriptionKey: "NetSpeedMonitor.app not found after unzip"])
+                    }
+
+                    guard let downloadedVersion = Bundle(url: downloadedApp)?.infoDictionary?["CFBundleShortVersionString"] as? String,
+                          self.appVersion.compare(downloadedVersion, options: .numeric) != .orderedDescending else {
+                        throw NSError(domain: "UpdateError", code: 4, userInfo: [NSLocalizedDescriptionKey: "Downloaded app version is invalid"])
+                    }
+
+                    // Current app bundle path
+                    let currentAppPath = Bundle.main.bundlePath
+
+                    // Set executable permissions
+                    let execPath = downloadedApp.appendingPathComponent("Contents/MacOS/NetSpeedMonitor")
+                    if fileManager.fileExists(atPath: execPath.path) {
+                        try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: execPath.path)
+                    }
+
+                    // Replace the current app with the new one
+                    // We need to use a helper script because we can't overwrite a running bundle easily
+                    let helperScript = unzipDir.appendingPathComponent("update.sh")
+                    let quotedCurrentAppPath = self.shellQuote(currentAppPath)
+                    let quotedDownloadedAppPath = self.shellQuote(downloadedApp.path)
+                    let quotedUnzipDirPath = self.shellQuote(unzipDir.path)
+                    let scriptContent = """
+                    #!/bin/bash
+                    set -euo pipefail
+
+                    current_app=\(quotedCurrentAppPath)
+                    downloaded_app=\(quotedDownloadedAppPath)
+                    work_dir=\(quotedUnzipDirPath)
+                    backup_app="${current_app}.backup.$(/bin/date +%s)"
+
+                    sleep 1
+
+                    if [ ! -d "$downloaded_app" ]; then
+                        exit 10
+                    fi
+
+                    if [ -d "$current_app" ]; then
+                        if ! /bin/mv "$current_app" "$backup_app"; then
+                            /usr/bin/open "$current_app" || true
+                            exit 12
+                        fi
+                    fi
+
+                    if ! /usr/bin/ditto "$downloaded_app" "$current_app"; then
+                        /bin/rm -rf "$current_app"
+                        if [ -d "$backup_app" ]; then
+                            /bin/mv "$backup_app" "$current_app"
+                            /usr/bin/open "$current_app" || true
+                        fi
+                        exit 11
+                    fi
+
+                    /usr/bin/xattr -rd com.apple.quarantine "$current_app" 2>/dev/null || true
+                    /bin/chmod -R u+rwX,go+rX "$current_app" 2>/dev/null || true
+                    /bin/chmod +x "$current_app/Contents/MacOS/NetSpeedMonitor" 2>/dev/null || true
+                    /usr/bin/codesign --verify --deep --strict "$current_app" >/dev/null 2>&1 || true
+
+                    /bin/rm -rf "$backup_app"
+                    /bin/rm -rf "$work_dir"
+                    /usr/bin/open "$current_app"
+                    """
+                    try scriptContent.write(to: helperScript, atomically: true, encoding: .utf8)
+                    try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helperScript.path)
+
+                    // Launch the helper script and quit
+                    let helperProcess = Process()
+                    helperProcess.executableURL = URL(fileURLWithPath: "/bin/bash")
+                    helperProcess.arguments = [helperScript.path]
+                    try helperProcess.run()
+
+                    // Quit the app
+                    NSApp.terminate(nil)
+
+                } catch {
+                    self.showAlert(title: "Update Failed", message: error.localizedDescription)
+                    // Cleanup
+                    try? fileManager.removeItem(at: unzipDir)
+                }
+            }
+        }
+        downloadTask.resume()
+    }
+
+    private func sha256Hex(for fileURL: URL) throws -> String {
+        let data = try Data(contentsOf: fileURL)
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func shellQuote(_ value: String) -> String {
+        return "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
+    @objc private func showAbout(_ sender: NSMenuItem) {
+        menu.cancelTracking()
+        let version = appVersion
+        let repo = githubRepo
+
+        let alert = NSAlert()
+        alert.messageText = "NetSpeedMonitor"
+        alert.informativeText = "Version \(version)\n\nA minimal menu bar network speed monitor for macOS.\n\nGitHub: https://github.com/\(repo)\nAuthor: elegracer"
+        alert.addButton(withTitle: "OK")
+        alert.alertStyle = .informational
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
+    // MARK: - Alert Helpers
+
+    private func showAlert(title: String, message: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "OK")
+        alert.alertStyle = .informational
+        alert.icon = NSImage(size: .zero)
+        alert.runModal()
+    }
+
+    private func showQuestionAlert(title: String, message: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "Update")
+        alert.addButton(withTitle: "Cancel")
+        alert.alertStyle = .informational
+        alert.icon = NSImage(size: .zero)
+        return alert.runModal() == .alertFirstButtonReturn
     }
 }
 

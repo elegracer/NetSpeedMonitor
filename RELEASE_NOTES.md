@@ -1,7 +1,9 @@
-# NetSpeedMonitor v1.9
+# NetSpeedMonitor v1.10
 
 ## What's New
 
+- Adds Check Update to install newer GitHub releases from the menu.
+- Adds About with the current version, GitHub link, and author.
 - Automatically follows the effective network interface when a VPN connects or disconnects.
 - Shows the interface selected by Auto mode, for example `Auto (utun4)`.
 - Adds an interface submenu with live upload and download rates.
