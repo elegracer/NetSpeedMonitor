@@ -1,7 +1,10 @@
-# NetSpeedMonitor v1.10
+# NetSpeedMonitor v1.11
 
 ## What's New
 
+- Improves Check Update with a single in-window flow, download progress, and install confirmation.
+- Uses a GitHub release redirect flow to avoid GitHub API rate-limit failures.
+- Updates About and Check Update windows with a consistent material style.
 - Adds Check Update to install newer GitHub releases from the menu.
 - Adds About with the current version, GitHub link, and author.
 - Automatically follows the effective network interface when a VPN connects or disconnects.

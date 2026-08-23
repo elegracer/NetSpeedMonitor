@@ -57,6 +57,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var timer: Timer?
     private let netTrafficStat = NetTrafficStatReceiver()
 
+    private var updateProgressWindow: NSWindow?
+    private var updateTitleLabel: NSTextField?
+    private var updateProgressIndicator: NSProgressIndicator?
+    private var updateProgressLabel: NSTextField?
+    private var updatePrimaryButton: NSButton?
+    private var updateSecondaryButton: NSButton?
+    private var updateProgressObservation: NSKeyValueObservation?
+    private var pendingUpdateRelease: [String: Any]?
+    private var preparedUpdateScript: URL?
+    private var preparedUpdateWorkDir: URL?
+    private var aboutWindow: NSWindow?
+
     private var isMenuOpen: Bool = false
     private var latestSpeeds: [String: (down: Double, up: Double, isUp: Bool)] = [:]
 
@@ -451,18 +463,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func checkUpdate(_ sender: NSMenuItem) {
         // Close the menu first to avoid run loop conflict with modal alerts
         menu.cancelTracking()
+        pendingUpdateRelease = nil
+        preparedUpdateScript = nil
+        preparedUpdateWorkDir = nil
+        showUpdateWindow(title: "Checking for Updates", message: "Checking the latest GitHub release...", progress: nil)
+        setUpdateButtons(primaryTitle: nil, primaryAction: nil, secondaryTitle: nil, secondaryAction: nil)
         performUpdateCheck()
     }
 
     private func performUpdateCheck() {
-        let urlString = "https://api.github.com/repos/\(githubRepo)/releases/latest"
+        let urlString = "https://github.com/\(githubRepo)/releases/latest"
         guard let url = URL(string: urlString) else {
-            showAlert(title: "Update Check Failed", message: "Invalid GitHub API URL.")
+            showUpdateFailure("Invalid GitHub release URL.")
             return
         }
 
         var request = URLRequest(url: url)
-        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        request.setValue("NetSpeedMonitor/\(appVersion)", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 15
 
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
@@ -470,78 +487,92 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self = self else { return }
 
                 if let error = error {
-                    self.showAlert(title: "Update Check Failed", message: "Network error: \(error.localizedDescription)")
+                    self.showUpdateFailure("Could not check for updates: \(error.localizedDescription)")
                     return
                 }
 
                 guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode),
-                      let data = data else {
-                    self.showAlert(title: "Update Check Failed", message: "Unexpected server response.")
+                      (200...299).contains(httpResponse.statusCode) else {
+                    let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                    self.showUpdateFailure("GitHub returned an unexpected response (HTTP \(status)).")
                     return
                 }
 
-                do {
-                    guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                          let tagName = json["tag_name"] as? String else {
-                        self.showAlert(title: "Update Check Failed", message: "Failed to parse release data.")
-                        return
-                    }
+                guard let finalURL = httpResponse.url,
+                      finalURL.pathComponents.contains("tag"),
+                      let tagName = finalURL.pathComponents.last,
+                      tagName.hasPrefix("v") else {
+                    self.showUpdateFailure("Could not determine the latest release version.")
+                    return
+                }
 
-                    let latestVersion = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
-                    let currentVersion = self.appVersion
-
-                    let comparison = currentVersion.compare(latestVersion, options: .numeric)
-                    if comparison == .orderedAscending {
-                        // New version available — ask to download
-                        let shouldUpdate = self.showQuestionAlert(
-                            title: "Update Available",
-                            message: "Version \(latestVersion) is available (current: \(currentVersion)).\nDownload and install now?"
-                        )
-                        if shouldUpdate {
-                            self.downloadAndInstallLatestRelease(from: json)
-                        }
-                    } else if comparison == .orderedSame {
-                        self.showAlert(title: "Up to Date", message: "You are running the latest version (\(currentVersion)).")
-                    } else {
-                        self.showAlert(title: "Up to Date",
-                                       message: "You are running version \(currentVersion), which is newer than the latest release (\(latestVersion)).")
-                    }
-                } catch {
-                    self.showAlert(title: "Update Check Failed", message: "Parse error: \(error.localizedDescription)")
+                let latestVersion = String(tagName.dropFirst())
+                let currentVersion = self.appVersion
+                let comparison = currentVersion.compare(latestVersion, options: .numeric)
+                if comparison == .orderedAscending {
+                    let downloadBase = "https://github.com/\(self.githubRepo)/releases/download/\(tagName)"
+                    self.pendingUpdateRelease = [
+                        "tag_name": tagName,
+                        "assets": [[
+                            "name": "NetSpeedMonitor.zip",
+                            "browser_download_url": "\(downloadBase)/NetSpeedMonitor.zip",
+                            "sha256_download_url": "\(downloadBase)/NetSpeedMonitor.sha256",
+                        ]],
+                    ]
+                    self.showUpdateWindow(title: "Update Available", message: "Version \(latestVersion) is available.\nCurrent version: \(currentVersion)", progress: nil)
+                    self.setUpdateButtons(primaryTitle: "Download", primaryAction: #selector(self.startPendingUpdateDownload(_:)), secondaryTitle: "Cancel", secondaryAction: #selector(self.closeUpdateWindow(_:)))
+                } else if comparison == .orderedSame {
+                    self.showUpdateWindow(title: "Up to Date", message: "You are running the latest version (\(currentVersion)).", progress: nil)
+                    self.setUpdateButtons(primaryTitle: "OK", primaryAction: #selector(self.closeUpdateWindow(_:)), secondaryTitle: nil, secondaryAction: nil)
+                } else {
+                    self.showUpdateWindow(title: "Up to Date", message: "You are running version \(currentVersion), which is newer than the latest release (\(latestVersion)).", progress: nil)
+                    self.setUpdateButtons(primaryTitle: "OK", primaryAction: #selector(self.closeUpdateWindow(_:)), secondaryTitle: nil, secondaryAction: nil)
                 }
             }
         }
         task.resume()
     }
 
+    @objc private func startPendingUpdateDownload(_ sender: NSButton) {
+        guard let release = pendingUpdateRelease else {
+            showUpdateFailure("Release data is no longer available.")
+            return
+        }
+        setUpdateButtons(primaryTitle: nil, primaryAction: nil, secondaryTitle: nil, secondaryAction: nil)
+        downloadAndInstallLatestRelease(from: release)
+    }
+
     private func downloadAndInstallLatestRelease(from json: [String: Any]) {
         // Find the asset named NetSpeedMonitor.zip
         guard let assets = json["assets"] as? [[String: Any]] else {
-            showAlert(title: "Update Failed", message: "No assets found in the release.")
+            showUpdateFailure("No assets found in the release.")
             return
         }
 
         guard let asset = assets.first(where: { ($0["name"] as? String) == "NetSpeedMonitor.zip" }),
               let downloadURLString = asset["browser_download_url"] as? String,
               let downloadURL = URL(string: downloadURLString) else {
-            showAlert(title: "Update Failed", message: "NetSpeedMonitor.zip asset not found in the release.")
+            showUpdateFailure("NetSpeedMonitor.zip asset not found in the release.")
             return
         }
 
         let expectedDigest = asset["digest"] as? String
+        let checksumURLString = asset["sha256_download_url"] as? String
+
+        showUpdateWindow(title: "Downloading Update", message: "Downloading update... 0%", progress: 0)
+        setUpdateButtons(primaryTitle: nil, primaryAction: nil, secondaryTitle: nil, secondaryAction: nil)
 
         let downloadTask = URLSession.shared.downloadTask(with: downloadURL) { [weak self] tempURL, _, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
 
                 if let error = error {
-                    self.showAlert(title: "Download Failed", message: "Could not download update: \(error.localizedDescription)")
+                    self.showUpdateFailure("Could not download update: \(error.localizedDescription)")
                     return
                 }
 
                 guard let tempURL = tempURL else {
-                    self.showAlert(title: "Download Failed", message: "No data received.")
+                    self.showUpdateFailure("No data received.")
                     return
                 }
 
@@ -563,8 +594,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                     try fileManager.moveItem(at: tempURL, to: zipPath)
 
-                    if let expectedDigest, expectedDigest.hasPrefix("sha256:") {
-                        let expectedSHA256 = String(expectedDigest.dropFirst("sha256:".count)).lowercased()
+                    if let expectedSHA256 = try self.expectedSHA256(from: expectedDigest, checksumURLString: checksumURLString) {
                         let actualSHA256 = try self.sha256Hex(for: zipPath)
                         guard actualSHA256 == expectedSHA256 else {
                             throw NSError(domain: "UpdateError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Downloaded update failed checksum verification"])
@@ -650,20 +680,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     try scriptContent.write(to: helperScript, atomically: true, encoding: .utf8)
                     try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helperScript.path)
 
-                    // Launch the helper script and quit
-                    let helperProcess = Process()
-                    helperProcess.executableURL = URL(fileURLWithPath: "/bin/bash")
-                    helperProcess.arguments = [helperScript.path]
-                    try helperProcess.run()
-
-                    // Quit the app
-                    NSApp.terminate(nil)
+                    self.preparedUpdateScript = helperScript
+                    self.preparedUpdateWorkDir = unzipDir
+                    self.showUpdateWindow(title: "Ready to Install", message: "Version \(downloadedVersion) has been downloaded.\nInstall now? NetSpeedMonitor will restart.", progress: nil)
+                    self.setUpdateButtons(primaryTitle: "Install", primaryAction: #selector(self.installPreparedUpdate(_:)), secondaryTitle: "Cancel", secondaryAction: #selector(self.closeUpdateWindow(_:)))
 
                 } catch {
-                    self.showAlert(title: "Update Failed", message: error.localizedDescription)
+                    self.showUpdateFailure(error.localizedDescription)
                     // Cleanup
                     try? fileManager.removeItem(at: unzipDir)
                 }
+            }
+        }
+
+        updateProgressObservation = downloadTask.progress.observe(\.fractionCompleted, options: [.new]) { [weak self] progress, _ in
+            DispatchQueue.main.async {
+                self?.updateDownloadProgress(progress.fractionCompleted)
             }
         }
         downloadTask.resume()
@@ -675,46 +707,286 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 
+    private func expectedSHA256(from digest: String?, checksumURLString: String?) throws -> String? {
+        if let digest, digest.hasPrefix("sha256:") {
+            return String(digest.dropFirst("sha256:".count)).lowercased()
+        }
+
+        guard let checksumURLString, let checksumURL = URL(string: checksumURLString) else {
+            return nil
+        }
+
+        let checksumText = try String(contentsOf: checksumURL, encoding: .utf8)
+        return checksumText.split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" }).first.map { String($0).lowercased() }
+    }
+
     private func shellQuote(_ value: String) -> String {
         return "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
+    private func showUpdateWindow(title: String, message: String, progress: Double?) {
+        let window: NSWindow
+        if let existingWindow = updateProgressWindow {
+            window = existingWindow
+        } else {
+            window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 360, height: 160),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Software Update"
+            window.titleVisibility = .visible
+            window.titlebarAppearsTransparent = false
+            window.hasShadow = true
+            window.isMovableByWindowBackground = false
+            window.isReleasedWhenClosed = false
+            window.standardWindowButton(.closeButton)?.target = self
+            window.standardWindowButton(.closeButton)?.action = #selector(closeUpdateWindow(_:))
+
+            let contentView = NSVisualEffectView(frame: window.contentView?.bounds ?? .zero)
+            contentView.material = .hudWindow
+            contentView.blendingMode = .behindWindow
+            contentView.state = .active
+            contentView.wantsLayer = true
+            window.contentView = contentView
+
+            let titleLabel = NSTextField(labelWithString: title)
+            titleLabel.translatesAutoresizingMaskIntoConstraints = false
+            titleLabel.alignment = .center
+            titleLabel.font = NSFont.boldSystemFont(ofSize: 15)
+            contentView.addSubview(titleLabel)
+
+            let messageLabel = NSTextField(labelWithString: message)
+            messageLabel.translatesAutoresizingMaskIntoConstraints = false
+            messageLabel.alignment = .center
+            messageLabel.maximumNumberOfLines = 3
+            messageLabel.lineBreakMode = .byWordWrapping
+            contentView.addSubview(messageLabel)
+
+            let progressIndicator = NSProgressIndicator()
+            progressIndicator.translatesAutoresizingMaskIntoConstraints = false
+            progressIndicator.isIndeterminate = false
+            progressIndicator.minValue = 0
+            progressIndicator.maxValue = 100
+            contentView.addSubview(progressIndicator)
+
+            let primaryButton = NSButton(title: "OK", target: nil, action: nil)
+            primaryButton.translatesAutoresizingMaskIntoConstraints = false
+            primaryButton.bezelStyle = .rounded
+            primaryButton.keyEquivalent = "\r"
+            contentView.addSubview(primaryButton)
+
+            let secondaryButton = NSButton(title: "Cancel", target: nil, action: nil)
+            secondaryButton.translatesAutoresizingMaskIntoConstraints = false
+            secondaryButton.bezelStyle = .rounded
+            contentView.addSubview(secondaryButton)
+
+            NSLayoutConstraint.activate([
+                titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 22),
+                titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+                titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+                messageLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
+                messageLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+                messageLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+                progressIndicator.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 14),
+                progressIndicator.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+                progressIndicator.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+                primaryButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+                primaryButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+                secondaryButton.trailingAnchor.constraint(equalTo: primaryButton.leadingAnchor, constant: -8),
+                secondaryButton.centerYAnchor.constraint(equalTo: primaryButton.centerYAnchor),
+            ])
+
+            updateProgressWindow = window
+            updateTitleLabel = titleLabel
+            updateProgressLabel = messageLabel
+            updateProgressIndicator = progressIndicator
+            updatePrimaryButton = primaryButton
+            updateSecondaryButton = secondaryButton
+            window.center()
+        }
+
+        updateTitleLabel?.stringValue = title
+        updateProgressLabel?.stringValue = message
+        if let progress {
+            updateProgressIndicator?.isHidden = false
+            updateProgressIndicator?.doubleValue = max(0, min(100, progress * 100))
+        } else {
+            updateProgressIndicator?.isHidden = true
+        }
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func setUpdateButtons(primaryTitle: String?, primaryAction: Selector?, secondaryTitle: String?, secondaryAction: Selector?) {
+        configureUpdateButton(updatePrimaryButton, title: primaryTitle, action: primaryAction)
+        configureUpdateButton(updateSecondaryButton, title: secondaryTitle, action: secondaryAction)
+    }
+
+    private func configureUpdateButton(_ button: NSButton?, title: String?, action: Selector?) {
+        guard let button else { return }
+        guard let title, let action else {
+            button.isHidden = true
+            button.target = nil
+            button.action = nil
+            return
+        }
+        button.title = title
+        button.target = self
+        button.action = action
+        button.isHidden = false
+    }
+
+    private func updateDownloadProgress(_ fractionCompleted: Double) {
+        let percent = max(0, min(100, fractionCompleted * 100))
+        updateProgressIndicator?.doubleValue = percent
+        updateProgressLabel?.stringValue = "Downloading update... \(Int(percent))%"
+    }
+
+    private func showUpdateFailure(_ message: String) {
+        updateProgressObservation?.invalidate()
+        updateProgressObservation = nil
+        showUpdateWindow(title: "Update Failed", message: message, progress: nil)
+        setUpdateButtons(primaryTitle: "OK", primaryAction: #selector(closeUpdateWindow(_:)), secondaryTitle: nil, secondaryAction: nil)
+    }
+
+    @objc private func installPreparedUpdate(_ sender: NSButton) {
+        guard let script = preparedUpdateScript else {
+            showUpdateFailure("The downloaded update is no longer available.")
+            return
+        }
+
+        do {
+            let helperProcess = Process()
+            helperProcess.executableURL = URL(fileURLWithPath: "/bin/bash")
+            helperProcess.arguments = [script.path]
+            try helperProcess.run()
+            NSApp.terminate(nil)
+        } catch {
+            showUpdateFailure("Could not start installation: \(error.localizedDescription)")
+        }
+    }
+
+    @objc private func closeUpdateWindow(_ sender: NSButton) {
+        updateProgressObservation?.invalidate()
+        updateProgressObservation = nil
+        if let preparedUpdateWorkDir {
+            try? FileManager.default.removeItem(at: preparedUpdateWorkDir)
+        }
+        pendingUpdateRelease = nil
+        preparedUpdateScript = nil
+        preparedUpdateWorkDir = nil
+        updateProgressWindow?.close()
+        updateProgressWindow = nil
+        updateTitleLabel = nil
+        updateProgressIndicator = nil
+        updateProgressLabel = nil
+        updatePrimaryButton = nil
+        updateSecondaryButton = nil
+    }
+
     @objc private func showAbout(_ sender: NSMenuItem) {
         menu.cancelTracking()
+        if let aboutWindow {
+            aboutWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
         let version = appVersion
         let repo = githubRepo
 
-        let alert = NSAlert()
-        alert.messageText = "NetSpeedMonitor"
-        alert.informativeText = "Version \(version)\n\nA minimal menu bar network speed monitor for macOS.\n\nGitHub: https://github.com/\(repo)\nAuthor: elegracer"
-        alert.addButton(withTitle: "OK")
-        alert.alertStyle = .informational
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 170),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "About NetSpeedMonitor"
+        window.titleVisibility = .visible
+        window.titlebarAppearsTransparent = false
+        window.hasShadow = true
+        window.isMovableByWindowBackground = false
+        window.isReleasedWhenClosed = false
+
+        let contentView = NSVisualEffectView(frame: window.contentView?.bounds ?? .zero)
+        contentView.material = .hudWindow
+        contentView.blendingMode = .behindWindow
+        contentView.state = .active
+        contentView.wantsLayer = true
+        window.contentView = contentView
+
+        let titleLabel = NSTextField(labelWithString: "NetSpeedMonitor")
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.alignment = .center
+        titleLabel.font = NSFont.boldSystemFont(ofSize: 15)
+        titleLabel.isSelectable = true
+        contentView.addSubview(titleLabel)
+
+        let versionLabel = NSTextField(labelWithString: "Version \(version)")
+        versionLabel.translatesAutoresizingMaskIntoConstraints = false
+        versionLabel.alignment = .center
+        versionLabel.isSelectable = true
+        contentView.addSubview(versionLabel)
+
+        let githubURLString = "https://github.com/\(repo)"
+        let linkLabel = NSTextField(labelWithString: githubURLString)
+        linkLabel.translatesAutoresizingMaskIntoConstraints = false
+        linkLabel.alignment = .center
+        linkLabel.isSelectable = true
+        linkLabel.allowsEditingTextAttributes = true
+        linkLabel.attributedStringValue = NSAttributedString(
+            string: githubURLString,
+            attributes: [
+                .link: githubURLString,
+                .foregroundColor: NSColor.linkColor,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+            ]
+        )
+        contentView.addSubview(linkLabel)
+
+        let authorLabel = NSTextField(labelWithString: "Author: elegracer")
+        authorLabel.translatesAutoresizingMaskIntoConstraints = false
+        authorLabel.alignment = .center
+        authorLabel.isSelectable = true
+        contentView.addSubview(authorLabel)
+
+        let okButton = NSButton(title: "OK", target: self, action: #selector(closeAboutWindow(_:)))
+        okButton.translatesAutoresizingMaskIntoConstraints = false
+        okButton.bezelStyle = .rounded
+        okButton.keyEquivalent = "\r"
+        contentView.addSubview(okButton)
+
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
+            versionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            versionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
+            versionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
+            linkLabel.topAnchor.constraint(equalTo: versionLabel.bottomAnchor, constant: 6),
+            linkLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
+            linkLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
+            authorLabel.topAnchor.constraint(equalTo: linkLabel.bottomAnchor, constant: 6),
+            authorLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
+            authorLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
+            okButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            okButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+        ])
+
+        aboutWindow = window
+        window.center()
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
     }
 
-    // MARK: - Alert Helpers
-
-    private func showAlert(title: String, message: String) {
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = message
-        alert.addButton(withTitle: "OK")
-        alert.alertStyle = .informational
-        alert.icon = NSImage(size: .zero)
-        alert.runModal()
+    @objc private func closeAboutWindow(_ sender: NSButton) {
+        aboutWindow?.close()
+        aboutWindow = nil
     }
 
-    private func showQuestionAlert(title: String, message: String) -> Bool {
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = message
-        alert.addButton(withTitle: "Update")
-        alert.addButton(withTitle: "Cancel")
-        alert.alertStyle = .informational
-        alert.icon = NSImage(size: .zero)
-        return alert.runModal() == .alertFirstButtonReturn
-    }
 }
 
 extension AppDelegate: NSMenuDelegate {
