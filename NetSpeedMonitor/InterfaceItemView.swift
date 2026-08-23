@@ -9,12 +9,12 @@ class InterfaceItemView: NSView {
     private var hovered: Bool = false
 
     static let nameFont = NSFont.menuFont(ofSize: 13)
-    static let speedFont = NSFont.monospacedSystemFont(ofSize: 8, weight: .semibold)
+    static let speedFont = NSFont.monospacedSystemFont(ofSize: 9, weight: .medium)
 
     static let leftMargin: CGFloat = 16
     static let checkSize: CGFloat = 12
     static let gapAfterCheck: CGFloat = 4
-    static let gapBeforeSpeed: CGFloat = 36
+    static let gapBeforeSpeed: CGFloat = 24
     static let rightMargin: CGFloat = 14
 
     static func measureSpeedWidth(_ text: String) -> CGFloat {

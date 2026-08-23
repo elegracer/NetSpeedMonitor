@@ -6,24 +6,6 @@ import CryptoKit
 
 let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "elegracer")
 
-enum NetSpeedUpdateInterval: Int, CaseIterable {
-    case Sec1 = 1
-    case Sec2 = 2
-    case Sec5 = 5
-    case Sec10 = 10
-    case Sec30 = 30
-
-    var displayName: String {
-        switch self {
-        case .Sec1: return "1s"
-        case .Sec2: return "2s"
-        case .Sec5: return "5s"
-        case .Sec10: return "10s"
-        case .Sec30: return "30s"
-        }
-    }
-}
-
 private enum UDKeys {
     static let selectedInterface = "SelectedInterfaceName"
     static let updateInterval = "NetSpeedUpdateInterval"
@@ -35,6 +17,132 @@ class MenuSpacerView: NSView {
     }
     override var intrinsicContentSize: NSSize {
         return NSSize(width: spacerWidth, height: 0)
+    }
+}
+
+class IntervalScaleView: NSView {
+    private let labels: [(index: Int, text: String)] = [
+        (0, "1s"), (4, "5s"), (6, "15s"), (9, "30s"), (12, "60s"),
+    ]
+    private let stepCount = 13
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: NSView.noIntrinsicMetric, height: 13)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 9),
+            .foregroundColor: NSColor.tertiaryLabelColor,
+        ]
+
+        for label in labels {
+            let size = (label.text as NSString).size(withAttributes: attributes)
+            let fraction = CGFloat(label.index) / CGFloat(stepCount - 1)
+            let centerX = bounds.minX + bounds.width * fraction
+            let x = min(max(bounds.minX, centerX - size.width / 2), bounds.maxX - size.width)
+            (label.text as NSString).draw(at: NSPoint(x: x, y: 0), withAttributes: attributes)
+        }
+    }
+}
+
+class IntervalMenuView: NSView {
+    private let presetIntervals = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60]
+    private let titleLabel = NSTextField(labelWithString: "Update Interval")
+    private let subtitleLabel = NSTextField(labelWithString: "Choose refresh cadence")
+    private let valueLabel = NSTextField(labelWithString: "")
+    private let slider = NSSlider()
+    private let scaleView = IntervalScaleView()
+
+    var onIntervalChange: ((Int) -> Void)?
+
+    var intervalSeconds: Int = 1 {
+        didSet { syncControls() }
+    }
+
+    override var isFlipped: Bool { true }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        commonInit()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        commonInit()
+    }
+
+    private func commonInit() {
+        frame.size = NSSize(width: 340, height: 108)
+
+        titleLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(titleLabel)
+
+        subtitleLabel.font = NSFont.systemFont(ofSize: 10)
+        subtitleLabel.textColor = .secondaryLabelColor
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(subtitleLabel)
+
+        valueLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
+        valueLabel.alignment = .right
+        valueLabel.textColor = .controlAccentColor
+        valueLabel.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(valueLabel)
+
+        slider.minValue = 0
+        slider.maxValue = Double(presetIntervals.count - 1)
+        slider.numberOfTickMarks = presetIntervals.count
+        slider.allowsTickMarkValuesOnly = true
+        slider.isContinuous = false
+        slider.toolTip = "Choose how often network speed is refreshed"
+        slider.setAccessibilityLabel("Update interval")
+        slider.target = self
+        slider.action = #selector(sliderChanged(_:))
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(slider)
+
+        scaleView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(scaleView)
+
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 22),
+            valueLabel.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            valueLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -22),
+
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
+            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: valueLabel.leadingAnchor, constant: -8),
+
+            slider.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 12),
+            slider.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 28),
+            slider.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -28),
+
+            scaleView.topAnchor.constraint(equalTo: slider.bottomAnchor, constant: -2),
+            scaleView.leadingAnchor.constraint(equalTo: slider.leadingAnchor, constant: 2),
+            scaleView.trailingAnchor.constraint(equalTo: slider.trailingAnchor, constant: -2),
+            scaleView.heightAnchor.constraint(equalToConstant: 13),
+        ])
+
+        syncControls()
+    }
+
+    private func syncControls() {
+        valueLabel.stringValue = "\(intervalSeconds) sec"
+        if let index = presetIntervals.firstIndex(of: intervalSeconds) {
+            slider.doubleValue = Double(index)
+        } else if let nearestIndex = presetIntervals.indices.min(by: {
+            abs(presetIntervals[$0] - intervalSeconds) < abs(presetIntervals[$1] - intervalSeconds)
+        }) {
+            slider.doubleValue = Double(nearestIndex)
+        }
+    }
+
+    @objc private func sliderChanged(_ sender: NSSlider) {
+        let index = max(0, min(presetIntervals.count - 1, Int(sender.doubleValue.rounded())))
+        onIntervalChange?(presetIntervals[index])
     }
 }
 
@@ -52,7 +160,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let interfaceItemRowHeight: CGFloat = 22
 
     private var autoLaunchItem: NSMenuItem!
-    private var intervalItems: [NetSpeedUpdateInterval: NSMenuItem] = [:]
+    private var intervalMenuView: IntervalMenuView!
 
     private var timer: Timer?
     private let netTrafficStat = NetTrafficStatReceiver()
@@ -64,6 +172,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var updatePrimaryButton: NSButton?
     private var updateSecondaryButton: NSButton?
     private var updateProgressObservation: NSKeyValueObservation?
+    private var updateSessionID: UUID?
     private var pendingUpdateRelease: [String: Any]?
     private var preparedUpdateScript: URL?
     private var preparedUpdateWorkDir: URL?
@@ -85,10 +194,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             text: "↑ \(String(format: "%6.2lf", 0)) \(" B")/s\n↓ \(String(format: "%6.2lf", 0)) \(" B")/s"
         )
         statusItem.button?.imagePosition = .imageOnly
+        statusItem.button?.toolTip = "NetSpeedMonitor"
+        statusItem.button?.setAccessibilityLabel("Network speed")
 
         buildMenu()
         updateAutoLaunchStateFromSystem()
-        updateIntervalCheckmarks()
         updateInterfaceCheckmarks()
         startRouteMonitoring()
         startTimer()
@@ -126,17 +236,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        let intervalHeader = NSMenuItem(title: "Update Interval", action: nil, keyEquivalent: "")
-        intervalHeader.isEnabled = false
-        menu.addItem(intervalHeader)
-
-        for interval in NetSpeedUpdateInterval.allCases {
-            let item = NSMenuItem(title: interval.displayName, action: #selector(selectInterval(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = interval.rawValue
-            intervalItems[interval] = item
-            menu.addItem(item)
+        let intervalItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        intervalMenuView = IntervalMenuView(frame: NSRect(x: 0, y: 0, width: 340, height: 108))
+        intervalMenuView.intervalSeconds = updateInterval
+        intervalMenuView.onIntervalChange = { [weak self] seconds in
+            self?.updateInterval = seconds
         }
+        intervalItem.view = intervalMenuView
+        menu.addItem(intervalItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -189,14 +296,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var isAutoMode: Bool { selectedInterfaceName.isEmpty }
 
-    private var updateInterval: NetSpeedUpdateInterval {
+    private var updateInterval: Int {
         get {
             let raw = UserDefaults.standard.integer(forKey: UDKeys.updateInterval)
-            return NetSpeedUpdateInterval(rawValue: raw) ?? .Sec1
+            let allowed = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60]
+            guard raw > 0 else { return 1 }
+            if allowed.contains(raw) { return raw }
+            return allowed.min(by: { abs($0 - raw) < abs($1 - raw) }) ?? 1
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: UDKeys.updateInterval)
-            updateIntervalCheckmarks()
+            let allowed = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60]
+            let seconds = allowed.contains(newValue) ? newValue : (allowed.min(by: { abs($0 - newValue) < abs($1 - newValue) }) ?? 1)
+            UserDefaults.standard.set(seconds, forKey: UDKeys.updateInterval)
+            intervalMenuView?.intervalSeconds = seconds
             stopTimer()
             startTimer()
         }
@@ -232,7 +344,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startTimer() {
-        let interval = TimeInterval(updateInterval.rawValue)
+        let interval = TimeInterval(updateInterval)
         let timer = Timer.scheduledTimer(timeInterval: interval, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
         RunLoop.current.add(timer, forMode: .common)
         self.timer = timer
@@ -360,13 +472,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func updateIntervalCheckmarks() {
-        let current = updateInterval
-        for (interval, item) in intervalItems {
-            item.state = (interval == current) ? .on : .off
-        }
-    }
-
     @objc private func updateAutoLaunchStateFromSystem() {
         let enabled = SMAppService.mainApp.status == .enabled
         autoLaunchItem.state = enabled ? .on : .off
@@ -430,11 +535,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func selectInterval(_ sender: NSMenuItem) {
-        guard let interval = NetSpeedUpdateInterval(rawValue: sender.tag) else { return }
-        updateInterval = interval
-    }
-
     @objc private func openActivityMonitor(_ sender: NSMenuItem) {
         let bundleID = "com.apple.ActivityMonitor"
         if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
@@ -463,6 +563,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func checkUpdate(_ sender: NSMenuItem) {
         // Close the menu first to avoid run loop conflict with modal alerts
         menu.cancelTracking()
+        updateSessionID = UUID()
         pendingUpdateRelease = nil
         preparedUpdateScript = nil
         preparedUpdateWorkDir = nil
@@ -472,6 +573,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func performUpdateCheck() {
+        guard let sessionID = updateSessionID else { return }
         let urlString = "https://github.com/\(githubRepo)/releases/latest"
         guard let url = URL(string: urlString) else {
             showUpdateFailure("Invalid GitHub release URL.")
@@ -485,6 +587,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                guard self.updateSessionID == sessionID else { return }
 
                 if let error = error {
                     self.showUpdateFailure("Could not check for updates: \(error.localizedDescription)")
@@ -543,6 +646,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func downloadAndInstallLatestRelease(from json: [String: Any]) {
+        guard let sessionID = updateSessionID else { return }
         // Find the asset named NetSpeedMonitor.zip
         guard let assets = json["assets"] as? [[String: Any]] else {
             showUpdateFailure("No assets found in the release.")
@@ -565,6 +669,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let downloadTask = URLSession.shared.downloadTask(with: downloadURL) { [weak self] tempURL, _, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                guard self.updateSessionID == sessionID else { return }
 
                 if let error = error {
                     self.showUpdateFailure("Could not download update: \(error.localizedDescription)")
@@ -695,7 +800,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         updateProgressObservation = downloadTask.progress.observe(\.fractionCompleted, options: [.new]) { [weak self] progress, _ in
             DispatchQueue.main.async {
-                self?.updateDownloadProgress(progress.fractionCompleted)
+                guard let self, self.updateSessionID == sessionID else { return }
+                self.updateDownloadProgress(progress.fractionCompleted)
             }
         }
         downloadTask.resume()
@@ -745,7 +851,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.standardWindowButton(.closeButton)?.action = #selector(closeUpdateWindow(_:))
 
             let contentView = NSVisualEffectView(frame: window.contentView?.bounds ?? .zero)
-            contentView.material = .hudWindow
+            contentView.material = .popover
             contentView.blendingMode = .behindWindow
             contentView.state = .active
             contentView.wantsLayer = true
@@ -876,6 +982,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             try? FileManager.default.removeItem(at: preparedUpdateWorkDir)
         }
         pendingUpdateRelease = nil
+        updateSessionID = nil
         preparedUpdateScript = nil
         preparedUpdateWorkDir = nil
         updateProgressWindow?.close()
@@ -899,7 +1006,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let repo = githubRepo
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 320, height: 170),
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 140),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -912,7 +1019,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
 
         let contentView = NSVisualEffectView(frame: window.contentView?.bounds ?? .zero)
-        contentView.material = .hudWindow
+        contentView.material = .popover
         contentView.blendingMode = .behindWindow
         contentView.state = .active
         contentView.wantsLayer = true
@@ -953,12 +1060,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         authorLabel.isSelectable = true
         contentView.addSubview(authorLabel)
 
-        let okButton = NSButton(title: "OK", target: self, action: #selector(closeAboutWindow(_:)))
-        okButton.translatesAutoresizingMaskIntoConstraints = false
-        okButton.bezelStyle = .rounded
-        okButton.keyEquivalent = "\r"
-        contentView.addSubview(okButton)
-
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
@@ -972,19 +1073,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             authorLabel.topAnchor.constraint(equalTo: linkLabel.bottomAnchor, constant: 6),
             authorLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
             authorLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
-            okButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            okButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
         ])
 
         aboutWindow = window
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    @objc private func closeAboutWindow(_ sender: NSButton) {
-        aboutWindow?.close()
-        aboutWindow = nil
     }
 
 }

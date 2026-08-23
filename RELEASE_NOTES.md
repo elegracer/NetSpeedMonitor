@@ -1,15 +1,15 @@
-# NetSpeedMonitor v1.11
+# NetSpeedMonitor v1.12
 
 ## What's New
 
-- Improves Check Update with a single in-window flow, download progress, and install confirmation.
-- Uses a GitHub release redirect flow to avoid GitHub API rate-limit failures.
-- Updates About and Check Update windows with a consistent material style.
+- Replaces Update Interval menu choices with a multi-stop slider from 1 to 60 seconds.
+- Adds clear interval labels and a live selected-value indicator.
+- Refines About and Check Update windows with a more native macOS material style.
 
 ## Fixes
 
-- Shows update failures in the update window when checking, downloading, validating, or preparing installation fails.
-- Separates Check Update and About menu items to avoid incorrect menu-item status icons or indentation.
+- Improves interface-rate readability and menu spacing.
+- Prevents closed update checks from reopening their window when an asynchronous request finishes.
 
 ## Requirements
 
