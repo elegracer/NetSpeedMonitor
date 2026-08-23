@@ -64,22 +64,10 @@ int NetTrafficStatGenerator::update() {
             net_traffic_stat.ifi_ibytes = ifmsg->ifm_data.ifi_ibytes;
             net_traffic_stat.ifi_obytes = ifmsg->ifm_data.ifi_obytes;
             net_traffic_stat.is_up = true;
-            if (net_traffic_stat.ifi_ibytes < last_net_traffic_stat.ifi_ibytes) {
-                net_traffic_stat.delta_ibytes = static_cast<int64_t>(net_traffic_stat.ifi_ibytes)
-                                                + (static_cast<int64_t>(1) << 32)
-                                                - last_net_traffic_stat.ifi_ibytes;
-            } else {
-                net_traffic_stat.delta_ibytes =
-                    static_cast<int64_t>(net_traffic_stat.ifi_ibytes) - last_net_traffic_stat.ifi_ibytes;
-            }
-            if (net_traffic_stat.ifi_obytes < last_net_traffic_stat.ifi_obytes) {
-                net_traffic_stat.delta_obytes = static_cast<int64_t>(net_traffic_stat.ifi_obytes)
-                                                + (static_cast<int64_t>(1) << 32)
-                                                - last_net_traffic_stat.ifi_obytes;
-            } else {
-                net_traffic_stat.delta_obytes =
-                    static_cast<int64_t>(net_traffic_stat.ifi_obytes) - last_net_traffic_stat.ifi_obytes;
-            }
+            net_traffic_stat.delta_ibytes =
+                counter_delta(net_traffic_stat.ifi_ibytes, last_net_traffic_stat.ifi_ibytes);
+            net_traffic_stat.delta_obytes =
+                counter_delta(net_traffic_stat.ifi_obytes, last_net_traffic_stat.ifi_obytes);
             net_traffic_stat.total_ibytes = last_net_traffic_stat.total_ibytes + net_traffic_stat.delta_ibytes;
             net_traffic_stat.total_obytes = last_net_traffic_stat.total_obytes + net_traffic_stat.delta_obytes;
 
@@ -88,10 +76,6 @@ int NetTrafficStatGenerator::update() {
                     .count();
             net_traffic_stat.ibytes_per_sec = net_traffic_stat.delta_ibytes / (net_traffic_stat.delta_ts_sec + 1e-3);
             net_traffic_stat.obytes_per_sec = net_traffic_stat.delta_obytes / (net_traffic_stat.delta_ts_sec + 1e-3);
-            if (net_traffic_stat.delta_ts_sec > 60.0) {
-                net_traffic_stat.ibytes_per_sec = 0.0;
-                net_traffic_stat.obytes_per_sec = 0.0;
-            }
         } else {
             net_traffic_stat.tp_retrieval = tp_retrieval;
             net_traffic_stat.ifi_ibytes = ifmsg->ifm_data.ifi_ibytes;

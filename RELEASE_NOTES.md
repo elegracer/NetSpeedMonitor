@@ -1,19 +1,22 @@
-# NetSpeedMonitor v1.12
+# NetSpeedMonitor Release Notes
 
 ## What's New
 
-- Replaces Update Interval menu choices with a multi-stop slider from 1 to 60 seconds.
-- Adds clear interval labels and a live selected-value indicator.
-- Refines About and Check Update windows with a more native macOS material style.
+- Uses a single version source for local builds, CI artifacts, and releases.
+- Builds releases with the macOS 26 SDK for consistent Liquid Glass controls.
+- Adds automated tests for interval settings, version checks, checksums, and traffic counter wrap-around.
 
 ## Fixes
 
-- Improves interface-rate readability and menu spacing.
-- Prevents closed update checks from reopening their window when an asynchronous request finishes.
+- Fixes the 60-second update interval incorrectly showing zero traffic.
+- Prevents stale traffic values after a statistics read failure.
+- Keeps automatic upload and download values on the same network interface.
+- Moves update verification and extraction off the main thread.
+- Strengthens update validation, rollback, restart checks, and failure reporting.
 
 ## Requirements
 
-- macOS 14.6 or later.
+- macOS 26 or later.
 - Apple silicon and Intel Macs are supported by the universal build.
 
 ## Install or Upgrade

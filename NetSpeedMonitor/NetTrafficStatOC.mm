@@ -24,7 +24,9 @@
 // This function does not take pppoe into account
 - (NSMutableDictionary *)getNetTrafficStatMap {
 
-    netTrafficStatGenerator.update();
+    if (netTrafficStatGenerator.update() != 0) {
+        return nil;
+    }
 
     const NetTrafficStatMap net_traffic_stat_map =
     netTrafficStatGenerator.get_latest_net_traffic_stat_map();

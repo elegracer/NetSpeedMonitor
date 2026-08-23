@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
     - name: Checkout code
@@ -19,12 +19,31 @@ jobs:
     - name: Create Build Directory
       run: mkdir -p build
 
+    - name: Verify Xcode Toolchain
+      run: |
+        xcodebuild -version
+        MIN_MACOS_VERSION=$(awk -F ' *= *' '/^MACOSX_DEPLOYMENT_TARGET/ { print $2 }' Version.xcconfig)
+        REQUIRED_SDK_MAJOR="${MIN_MACOS_VERSION%%.*}"
+        SDK_VERSION=$(xcrun --sdk macosx --show-sdk-version)
+        echo "macOS SDK: $SDK_VERSION"
+        if [[ "${SDK_VERSION%%.*}" -lt "$REQUIRED_SDK_MAJOR" ]]; then
+          echo "::error::macOS ${REQUIRED_SDK_MAJOR} SDK or newer is required"
+          exit 1
+        fi
+
+    - name: Verify Version Consistency
+      run: scripts/check-version-consistency.sh "${GITHUB_REF_TYPE}" "${GITHUB_REF_NAME}"
+
+    - name: Run Logic Tests
+      run: |
+        xcrun swiftc NetSpeedMonitor/AppSettings.swift NetSpeedMonitor/UpdateValidation.swift Tests/main.swift -o build/swift-logic-tests
+        build/swift-logic-tests
+        xcrun clang++ -std=c++17 Tests/NetTrafficStatTests.cpp -o build/traffic-tests
+        build/traffic-tests
+
     - name: Build with Xcode
       run: |
-        VERSION="${GITHUB_REF_NAME#v}"
-        if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
-          VERSION="1.9"
-        fi
+        VERSION=$(awk -F ' *= *' '/^MARKETING_VERSION/ { print $2 }' Version.xcconfig)
         xcodebuild \
           -project NetSpeedMonitor.xcodeproj \
           -scheme NetSpeedMonitor \
@@ -35,7 +54,6 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
-          MARKETING_VERSION="$VERSION" \
           CONFIGURATION_BUILD_DIR=build/Release \
           clean build
 
@@ -43,9 +61,16 @@ jobs:
       run: |
         EXECUTABLE="build/Release/NetSpeedMonitor.app/Contents/MacOS/NetSpeedMonitor"
         LIPO_OUTPUT=$(lipo -info "$EXECUTABLE")
+        BUILD_OUTPUT=$(xcrun vtool -show-build "$EXECUTABLE")
         echo "Binary Architectures: $LIPO_OUTPUT"
+        echo "$BUILD_OUTPUT"
         if [[ ! $LIPO_OUTPUT == *"x86_64"* || ! $LIPO_OUTPUT == *"arm64"* ]]; then
           echo "::error::Missing required architectures!"
+          exit 1
+        fi
+        REQUIRED_SDK_MAJOR=$(awk -F ' *= *' '/^MACOSX_DEPLOYMENT_TARGET/ { print int($2) }' Version.xcconfig)
+        if [[ ! $BUILD_OUTPUT =~ sdk[[:space:]]+${REQUIRED_SDK_MAJOR}\. ]]; then
+          echo "::error::Release binary was not linked against the macOS ${REQUIRED_SDK_MAJOR} SDK"
           exit 1
         fi
 

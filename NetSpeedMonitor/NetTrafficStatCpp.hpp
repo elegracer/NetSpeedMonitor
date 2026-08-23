@@ -2,6 +2,7 @@
 
 #include <map>
 #include <chrono>
+#include <cstdint>
 #include <vector>
 #include <set>
 #include <string>
@@ -9,6 +10,13 @@
 using clock_type = std::chrono::steady_clock;
 using duration_type = std::chrono::nanoseconds;
 using time_point_type = std::chrono::time_point<clock_type, duration_type>;
+
+inline int64_t counter_delta(uint32_t current, uint32_t previous) {
+    if (current < previous) {
+        return static_cast<int64_t>(current) + (static_cast<int64_t>(1) << 32) - previous;
+    }
+    return static_cast<int64_t>(current) - previous;
+}
 
 struct NetTrafficStat {
     time_point_type tp_retrieval; // time_point where this stat is retrieved
