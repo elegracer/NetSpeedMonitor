@@ -2,12 +2,11 @@
 
 ## What's New
 
-- Improves update installer diagnostics when app replacement is blocked.
+- Removes App Sandbox from the ad-hoc release build so the updater helper can replace the app in `/Applications`.
 
 ## Fixes
 
-- Falls back to an in-place bundle copy if moving the existing app aside fails.
-- Includes the original system error in replacement failures.
+- Fixes update failures where macOS denied app replacement with `Operation not permitted`.
 
 ## Requirements
 
