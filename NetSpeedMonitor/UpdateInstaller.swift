@@ -73,7 +73,7 @@ final class UpdateInstaller {
 
             /bin/mkdir -p "$(/usr/bin/dirname "$log_file")"
             exec >>"$log_file" 2>&1
-            echo "Starting update from \(currentVersion) to \(downloadedVersion)"
+            /usr/bin/printf '%s\n' \(shellQuote("Starting update from \(currentVersion) to \(downloadedVersion)"))
 
             report_failure() {
                 /bin/mkdir -p "$(/usr/bin/dirname "$error_file")"
@@ -96,6 +96,16 @@ final class UpdateInstaller {
                 fi
                 /bin/rm -rf "$work_dir"
                 exit 1
+            }
+
+            updated_app_is_running() {
+                for pid in $(/usr/bin/pgrep -x NetSpeedMonitor 2>/dev/null); do
+                    command_path=$(/bin/ps -ww -p "$pid" -o comm= 2>/dev/null || true)
+                    if [ "$command_path" = "$current_app/Contents/MacOS/NetSpeedMonitor" ]; then
+                        return 0
+                    fi
+                done
+                return 1
             }
 
             for attempt in {1..80}; do
@@ -133,7 +143,7 @@ final class UpdateInstaller {
             /usr/bin/open "$current_app" >/dev/null 2>&1 || rollback "The updated application could not be restarted."
             launched=0
             for attempt in {1..10}; do
-                if /usr/bin/pgrep -f -x "$current_app/Contents/MacOS/NetSpeedMonitor" >/dev/null 2>&1; then
+                if updated_app_is_running; then
                     launched=1
                     break
                 fi

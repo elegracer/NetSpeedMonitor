@@ -95,7 +95,7 @@ jobs:
     - name: Create Distribution Package
       run: |
         cd build/Release
-        ditto -c -k --keepParent NetSpeedMonitor.app NetSpeedMonitor.zip
+        COPYFILE_DISABLE=1 ditto -c -k --norsrc --keepParent NetSpeedMonitor.app NetSpeedMonitor.zip
         shasum -a 256 NetSpeedMonitor.zip > NetSpeedMonitor.sha256
 
     - name: Upload Artifacts (Master)

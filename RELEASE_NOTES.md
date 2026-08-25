@@ -2,13 +2,12 @@
 
 ## What's New
 
-- Adds persistent update installation logging for diagnostics.
+- Improves update installer diagnostics and restart validation.
 
 ## Fixes
 
-- Waits for the running app process to exit before replacing the app bundle.
-- Runs the installer independently so it continues after NetSpeedMonitor quits.
-- Verifies the exact updated app process starts and rolls back on failure.
+- Avoids false rollback when macOS launches the updated app with extra process arguments.
+- Safely writes update version details to the installer log.
 
 ## Requirements
 

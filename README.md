@@ -22,7 +22,7 @@ NetSpeedMonitor is a minimal menu bar app for macOS 26 and later. It reads per-i
 sudo xattr -rd com.apple.quarantine /Applications/NetSpeedMonitor.app
 ```
 
-To upgrade, quit NetSpeedMonitor and replace the existing app in `/Applications`.
+To upgrade, choose **Check Update** from the NetSpeedMonitor menu. If the in-app updater cannot run, quit NetSpeedMonitor and replace the existing app in `/Applications` manually.
 
 ## VPN Behavior
 
