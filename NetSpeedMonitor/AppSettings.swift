@@ -27,6 +27,60 @@ enum AppSettings {
         return channel
     }
 
+    static func releaseTags(in text: String) -> [String] {
+        let pattern = #"/releases/tag/(v[0-9][A-Za-z0-9._-]*)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
+        var seen = Set<String>()
+        var tags: [String] = []
+        for match in regex.matches(in: text, range: nsRange) {
+            guard let range = Range(match.range(at: 1), in: text) else { continue }
+            let tag = String(text[range])
+            if seen.insert(tag).inserted {
+                tags.append(tag)
+            }
+        }
+        return tags
+    }
+
+    static func version(fromReleaseTag tag: String) -> String? {
+        guard tag.hasPrefix("v"), tag.count > 1 else { return nil }
+        return String(tag.dropFirst())
+    }
+
+    static func appVersion(fromReleaseTag tag: String) -> String? {
+        version(fromReleaseTag: tag)?.split(separator: "-", maxSplits: 1).first.map(String.init)
+    }
+
+    static func isPrereleaseTag(_ tag: String) -> Bool {
+        version(fromReleaseTag: tag)?.contains("-") == true
+    }
+
+    static func newestReleaseTag(from tags: [String], includePrereleases: Bool) -> String? {
+        tags.compactMap { tag -> (tag: String, version: String)? in
+            guard let version = version(fromReleaseTag: tag) else { return nil }
+            if !includePrereleases && isPrereleaseTag(tag) { return nil }
+            return (tag, version)
+        }
+        .max { lhs, rhs in
+            let lhsAppVersion = appVersion(fromReleaseTag: lhs.tag) ?? lhs.version
+            let rhsAppVersion = appVersion(fromReleaseTag: rhs.tag) ?? rhs.version
+            let appComparison = compareVersions(lhsAppVersion, rhsAppVersion)
+            if appComparison != .orderedSame {
+                return appComparison == .orderedAscending
+            }
+
+            let lhsIsPrerelease = isPrereleaseTag(lhs.tag)
+            let rhsIsPrerelease = isPrereleaseTag(rhs.tag)
+            if lhsIsPrerelease != rhsIsPrerelease {
+                return lhsIsPrerelease && !rhsIsPrerelease
+            }
+
+            return compareVersions(lhs.version, rhs.version) == .orderedAscending
+        }?
+        .tag
+    }
+
     static func normalizedUpdateInterval(_ value: Int) -> Int {
         guard value > 0 else { return updateIntervals[0] }
         if updateIntervals.contains(value) { return value }

@@ -9,30 +9,6 @@ final class UpdateController: NSObject {
         let checksumURL: URL
     }
 
-    private struct GitHubRelease: Decodable {
-        struct Asset: Decodable {
-            let name: String
-            let browserDownloadURL: URL
-
-            enum CodingKeys: String, CodingKey {
-                case name
-                case browserDownloadURL = "browser_download_url"
-            }
-        }
-
-        let tagName: String
-        let draft: Bool
-        let prerelease: Bool
-        let assets: [Asset]
-
-        enum CodingKeys: String, CodingKey {
-            case tagName = "tag_name"
-            case draft
-            case prerelease
-            case assets
-        }
-    }
-
     private let appVersion: String
     private let githubRepo: String
     private let updateChannelProvider: () -> AppSettings.UpdateChannel
@@ -67,7 +43,12 @@ final class UpdateController: NSObject {
         let channel = updateChannelProvider()
         showWindow(title: "Checking for Updates", message: "Checking GitHub \(channel.title.lowercased())...", progress: nil)
         setButtons(primaryTitle: nil, primaryAction: nil, secondaryTitle: nil, secondaryAction: nil)
-        checkLatestRelease(channel: channel)
+        switch channel {
+        case .stable:
+            checkLatestStableRelease()
+        case .prerelease:
+            checkLatestPrereleaseOrStable()
+        }
     }
 
     func showPendingErrorIfNeeded() {
@@ -80,14 +61,48 @@ final class UpdateController: NSObject {
         }
     }
 
-    private func checkLatestRelease(channel: AppSettings.UpdateChannel) {
-        guard let sessionID, let url = URL(string: "https://api.github.com/repos/\(githubRepo)/releases") else {
+    private func checkLatestStableRelease() {
+        guard let sessionID, let url = URL(string: "https://github.com/\(githubRepo)/releases/latest") else {
             showFailure("Invalid GitHub release URL.")
             return
         }
 
         var request = URLRequest(url: url)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("NetSpeedMonitor/\(appVersion)", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 15
+        let task = URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+            DispatchQueue.main.async {
+                guard let self, self.sessionID == sessionID else { return }
+                if let error {
+                    self.showFailure("Could not check for updates: \(error.localizedDescription)")
+                    return
+                }
+                guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else {
+                    self.showFailure("GitHub returned an unexpected response (HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)).")
+                    return
+                }
+                guard let finalURL = response.url,
+                      finalURL.pathComponents.contains("tag"),
+                      let tag = finalURL.pathComponents.last,
+                      tag.hasPrefix("v"),
+                      let release = Self.releaseFromTag(tag, isPrerelease: false, githubRepo: self.githubRepo) else {
+                    self.showFailure("Could not determine the latest release version.")
+                    return
+                }
+                self.handleSelectedRelease(release, channelTitle: AppSettings.UpdateChannel.stable.title)
+            }
+        }
+        checkTask = task
+        task.resume()
+    }
+
+    private func checkLatestPrereleaseOrStable() {
+        guard let sessionID, let url = URL(string: "https://github.com/\(githubRepo)/releases") else {
+            showFailure("Invalid GitHub release URL.")
+            return
+        }
+
+        var request = URLRequest(url: url)
         request.setValue("NetSpeedMonitor/\(appVersion)", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 15
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
@@ -102,58 +117,48 @@ final class UpdateController: NSObject {
                     return
                 }
 
-                guard let data else {
-                    self.showFailure("No release data received.")
+                guard let data, let html = String(data: data, encoding: .utf8) else {
+                    self.showFailure("No release page received.")
                     return
                 }
 
-                let releases: [GitHubRelease]
-                do {
-                    releases = try JSONDecoder().decode([GitHubRelease].self, from: data)
-                } catch {
-                    self.showFailure("Could not parse GitHub releases: \(error.localizedDescription)")
+                guard let tag = AppSettings.newestReleaseTag(from: AppSettings.releaseTags(in: html), includePrereleases: true),
+                      let release = Self.releaseFromTag(tag, isPrerelease: AppSettings.isPrereleaseTag(tag), githubRepo: self.githubRepo) else {
+                    self.showFailure("Could not find a usable GitHub release or pre-release on the releases page.")
                     return
                 }
 
-                guard let release = Self.selectRelease(from: releases, channel: channel) else {
-                    let channelDescription = channel == .stable ? "official releases" : "pre-releases or official releases"
-                    self.showFailure("Could not find a usable GitHub release with NetSpeedMonitor.zip and NetSpeedMonitor.sha256 in \(channelDescription).")
-                    return
-                }
-
-                let version = release.version
-                switch AppSettings.compareVersions(self.appVersion, version) {
-                case .orderedAscending:
-                    self.pendingRelease = release
-                    let releaseType = release.isPrerelease ? "pre-release" : "release"
-                    self.showWindow(title: "Update Available", message: "Version \(version) (\(releaseType)) is available.\nCurrent version: \(self.appVersion)", progress: nil)
-                    self.setButtons(primaryTitle: "Download", primaryAction: #selector(self.startDownload(_:)), secondaryTitle: "Cancel", secondaryAction: #selector(self.close(_:)))
-                case .orderedSame:
-                    self.showWindow(title: "Up to Date", message: "You are running the latest version for \(channel.title.lowercased()) (\(self.appVersion)).", progress: nil)
-                    self.setButtons(primaryTitle: "OK", primaryAction: #selector(self.close(_:)), secondaryTitle: nil, secondaryAction: nil)
-                case .orderedDescending:
-                    self.showWindow(title: "Up to Date", message: "You are running version \(self.appVersion), which is newer than the latest release (\(version)).", progress: nil)
-                    self.setButtons(primaryTitle: "OK", primaryAction: #selector(self.close(_:)), secondaryTitle: nil, secondaryAction: nil)
-                }
+                self.handleSelectedRelease(release, channelTitle: AppSettings.UpdateChannel.prerelease.title)
             }
         }
         checkTask = task
         task.resume()
     }
 
-    private static func selectRelease(from releases: [GitHubRelease], channel: AppSettings.UpdateChannel) -> Release? {
-        releases.lazy
-            .filter { !$0.draft }
-            .filter { channel == .prerelease || !$0.prerelease }
-            .compactMap { release -> Release? in
-                guard release.tagName.hasPrefix("v") else { return nil }
-                guard let downloadURL = release.assets.first(where: { $0.name == "NetSpeedMonitor.zip" })?.browserDownloadURL,
-                      let checksumURL = release.assets.first(where: { $0.name == "NetSpeedMonitor.sha256" })?.browserDownloadURL else {
-                    return nil
-                }
-                return Release(version: String(release.tagName.dropFirst()), tag: release.tagName, isPrerelease: release.prerelease, downloadURL: downloadURL, checksumURL: checksumURL)
-            }
-            .max { AppSettings.compareVersions($0.version, $1.version) == .orderedAscending }
+    private func handleSelectedRelease(_ release: Release, channelTitle: String) {
+        switch AppSettings.compareVersions(appVersion, release.version) {
+        case .orderedAscending:
+            pendingRelease = release
+            let releaseType = release.isPrerelease ? "pre-release" : "release"
+            showWindow(title: "Update Available", message: "Version \(release.version) (\(releaseType)) is available.\nCurrent version: \(appVersion)", progress: nil)
+            setButtons(primaryTitle: "Download", primaryAction: #selector(startDownload(_:)), secondaryTitle: "Cancel", secondaryAction: #selector(close(_:)))
+        case .orderedSame:
+            showWindow(title: "Up to Date", message: "You are running the latest version for \(channelTitle.lowercased()) (\(appVersion)).", progress: nil)
+            setButtons(primaryTitle: "OK", primaryAction: #selector(close(_:)), secondaryTitle: nil, secondaryAction: nil)
+        case .orderedDescending:
+            showWindow(title: "Up to Date", message: "You are running version \(appVersion), which is newer than the latest release (\(release.version)).", progress: nil)
+            setButtons(primaryTitle: "OK", primaryAction: #selector(close(_:)), secondaryTitle: nil, secondaryAction: nil)
+        }
+    }
+
+    private static func releaseFromTag(_ tag: String, isPrerelease: Bool, githubRepo: String) -> Release? {
+        let base = "https://github.com/\(githubRepo)/releases/download/\(tag)"
+        guard let downloadURL = URL(string: "\(base)/NetSpeedMonitor.zip"),
+              let checksumURL = URL(string: "\(base)/NetSpeedMonitor.sha256") else {
+            return nil
+        }
+        guard let version = AppSettings.appVersion(fromReleaseTag: tag) else { return nil }
+        return Release(version: version, tag: tag, isPrerelease: isPrerelease, downloadURL: downloadURL, checksumURL: checksumURL)
     }
 
     @objc private func startDownload(_ sender: NSButton) {

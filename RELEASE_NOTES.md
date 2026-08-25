@@ -2,13 +2,11 @@
 
 ## What's New
 
-- Adds a Settings window with an update channel selector.
-- Defaults update checks to official releases only.
-- Allows testers to opt in to GitHub pre-release updates.
+- Uses GitHub web release pages for both official and pre-release update checks to avoid anonymous API rate limits.
 
 ## Fixes
 
-- Marks tags with a suffix, such as `v1.18-beta.1`, as GitHub pre-releases so they do not interrupt stable users.
+- Keeps the default update channel on official releases only, while allowing testers to opt in to pre-release checks without calling `api.github.com`.
 
 ## Requirements
 
