@@ -21,6 +21,7 @@ enum AppSettings {
     }
 
     static let updateIntervals = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60]
+    static let speedUnits = [" B", "KB", "MB", "GB", "TB"]
 
     static func normalizedUpdateChannel(_ value: String?) -> UpdateChannel {
         guard let value, let channel = UpdateChannel(rawValue: value) else { return .stable }
@@ -85,6 +86,29 @@ enum AppSettings {
         guard value > 0 else { return updateIntervals[0] }
         if updateIntervals.contains(value) { return value }
         return updateIntervals.min(by: { abs($0 - value) < abs($1 - value) }) ?? updateIntervals[0]
+    }
+
+    static func normalizedIntegerSmallUnits(_ value: Any?) -> Bool {
+        value as? Bool ?? false
+    }
+
+    static func speedValueAndUnit(bytesPerSecond: Double) -> (value: Double, unit: String) {
+        var value = bytesPerSecond
+        var index = 0
+        while value > 1000.0 && index < speedUnits.count - 1 {
+            value /= 1024.0
+            index += 1
+        }
+        return (value, speedUnits[index])
+    }
+
+    static func formattedSpeed(bytesPerSecond: Double, integerSmallUnits: Bool) -> String {
+        let (value, unit) = speedValueAndUnit(bytesPerSecond: bytesPerSecond)
+        let usesIntegerFormat = integerSmallUnits && (unit == " B" || unit == "KB")
+        if usesIntegerFormat {
+            return String(format: "%6.0lf %@/s", value.rounded(), unit)
+        }
+        return String(format: "%6.2lf %@/s", value, unit)
     }
 
     static func compareVersions(_ lhs: String, _ rhs: String) -> ComparisonResult {

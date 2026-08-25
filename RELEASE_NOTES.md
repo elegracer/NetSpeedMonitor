@@ -2,11 +2,11 @@
 
 ## What's New
 
-- Uses GitHub web release pages for both official and pre-release update checks to avoid anonymous API rate limits.
+- Adds a display setting to show B/s and KB/s speeds as rounded integers.
 
 ## Fixes
 
-- Keeps the default update channel on official releases only, while allowing testers to opt in to pre-release checks without calling `api.github.com`.
+- Keeps MB/s and larger units at two decimal places when integer small-unit display is enabled.
 
 ## Requirements
 

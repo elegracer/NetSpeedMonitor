@@ -9,6 +9,7 @@ private enum UDKeys {
     static let selectedInterface = "SelectedInterfaceName"
     static let updateInterval = "NetSpeedUpdateInterval"
     static let updateChannel = "NetSpeedUpdateChannel"
+    static let integerSmallUnits = "NetSpeedIntegerSmallUnits"
 }
 
 class MenuSpacerView: NSView {
@@ -42,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var aboutWindow: NSWindow?
     private var settingsWindow: NSWindow?
     private var updateChannelPopUp: NSPopUpButton?
+    private var integerSmallUnitsButton: NSButton?
     private lazy var updateController = UpdateController(appVersion: appVersion, githubRepo: githubRepo) { [weak self] in
         self?.updateChannel ?? .stable
     }
@@ -52,14 +54,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var activeAutoInterfaceName: String?
     private var routeConnection: NWConnection?
 
-    private let speedMetrics = [" B", "KB", "MB", "GB", "TB"]
-
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let zeroSpeed = formattedSpeed(0)
         statusItem.button?.image = MenuBarIconGenerator.generateIcon(
-            text: "↑ \(String(format: "%6.2lf", 0)) \(" B")/s\n↓ \(String(format: "%6.2lf", 0)) \(" B")/s"
+            text: "↑ \(zeroSpeed)\n↓ \(zeroSpeed)"
         )
         statusItem.button?.imagePosition = .imageOnly
         statusItem.button?.toolTip = "NetSpeedMonitor"
@@ -189,6 +190,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         set { UserDefaults.standard.set(newValue.rawValue, forKey: UDKeys.updateChannel) }
     }
 
+    private var integerSmallUnits: Bool {
+        get { AppSettings.normalizedIntegerSmallUnits(UserDefaults.standard.object(forKey: UDKeys.integerSmallUnits)) }
+        set {
+            UserDefaults.standard.set(newValue, forKey: UDKeys.integerSmallUnits)
+            tick()
+        }
+    }
+
     // MARK: - Timer
 
     private func startRouteMonitoring() {
@@ -310,13 +319,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         for name in interfaceViewsMap.keys {
             guard let v = interfaceViewsMap[name] else { continue }
             guard let sp = speeds[name] else {
-                v.speedText = "↓  0.00  B/s  ↑  0.00  B/s"
+                let zeroSpeed = formattedSpeed(0)
+                v.speedText = "↓\(zeroSpeed)  ↑\(zeroSpeed)"
                 continue
             }
-            let (downVal, downMetric) = iconSpeed(sp.down)
-            let (upVal, upMetric) = iconSpeed(sp.up)
-            let upStr = String(format: "%6.2lf %@/s", upVal, upMetric)
-            let downStr = String(format: "%6.2lf %@/s", downVal, downMetric)
+            let downStr = formattedSpeed(sp.down)
+            let upStr = formattedSpeed(sp.up)
             v.speedText = "↓\(downStr)  ↑\(upStr)"
         }
 
@@ -384,20 +392,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             upBps = sp.up
         }
 
-        let (downVal, downMetric) = iconSpeed(downBps)
-        let (upVal, upMetric) = iconSpeed(upBps)
-        let text = "↑ \(String(format: "%6.2lf", upVal)) \(upMetric)/s\n↓ \(String(format: "%6.2lf", downVal)) \(downMetric)/s"
+        let text = "↑ \(formattedSpeed(upBps))\n↓ \(formattedSpeed(downBps))"
         statusItem.button?.image = MenuBarIconGenerator.generateIcon(text: text)
     }
 
-    private func iconSpeed(_ bytesPerSec: Double) -> (Double, String) {
-        var v = bytesPerSec
-        var idx = 0
-        while v > 1000.0 && idx < speedMetrics.count - 1 {
-            v /= 1024.0
-            idx += 1
-        }
-        return (v, speedMetrics[idx])
+    private func formattedSpeed(_ bytesPerSec: Double) -> String {
+        AppSettings.formattedSpeed(bytesPerSecond: bytesPerSec, integerSmallUnits: integerSmallUnits)
     }
 
     // MARK: - Menu Actions
@@ -461,7 +461,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 170),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 220),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -500,6 +500,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contentView.addSubview(popUp)
         updateChannelPopUp = popUp
 
+        let displayLabel = NSTextField(labelWithString: "Display")
+        displayLabel.translatesAutoresizingMaskIntoConstraints = false
+        displayLabel.font = NSFont.boldSystemFont(ofSize: 13)
+        contentView.addSubview(displayLabel)
+
+        let integerButton = NSButton(checkboxWithTitle: "Show B/s and KB/s as integers", target: self, action: #selector(integerSmallUnitsChanged(_:)))
+        integerButton.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(integerButton)
+        integerSmallUnitsButton = integerButton
+
         let helpLabel = NSTextField(labelWithString: "Default is Release Only. Choose pre-releases only when you want to test builds before they become official.")
         helpLabel.translatesAutoresizingMaskIntoConstraints = false
         helpLabel.maximumNumberOfLines = 3
@@ -516,7 +526,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             popUp.centerYAnchor.constraint(equalTo: channelLabel.centerYAnchor),
             popUp.leadingAnchor.constraint(equalTo: channelLabel.trailingAnchor, constant: 12),
             popUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            helpLabel.topAnchor.constraint(equalTo: channelLabel.bottomAnchor, constant: 18),
+            displayLabel.topAnchor.constraint(equalTo: channelLabel.bottomAnchor, constant: 22),
+            displayLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            displayLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            integerButton.topAnchor.constraint(equalTo: displayLabel.bottomAnchor, constant: 10),
+            integerButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            integerButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            helpLabel.topAnchor.constraint(equalTo: integerButton.bottomAnchor, constant: 18),
             helpLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
             helpLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
         ])
@@ -533,12 +549,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         updateChannel = AppSettings.normalizedUpdateChannel(rawValue)
     }
 
+    @objc private func integerSmallUnitsChanged(_ sender: NSButton) {
+        integerSmallUnits = sender.state == .on
+    }
+
     private func syncSettingsControls() {
         let rawValue = updateChannel.rawValue
         for item in updateChannelPopUp?.itemArray ?? [] where item.representedObject as? String == rawValue {
             updateChannelPopUp?.select(item)
             break
         }
+        integerSmallUnitsButton?.state = integerSmallUnits ? .on : .off
     }
 
     @objc private func showAbout(_ sender: NSMenuItem) {
