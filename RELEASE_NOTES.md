@@ -2,12 +2,12 @@
 
 ## What's New
 
-- Improves update installer diagnostics and restart validation.
+- Improves update installer diagnostics when app replacement is blocked.
 
 ## Fixes
 
-- Avoids false rollback when macOS launches the updated app with extra process arguments.
-- Safely writes update version details to the installer log.
+- Falls back to an in-place bundle copy if moving the existing app aside fails.
+- Includes the original system error in replacement failures.
 
 ## Requirements
 

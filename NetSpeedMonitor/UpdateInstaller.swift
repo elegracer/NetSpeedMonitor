@@ -98,6 +98,24 @@ final class UpdateInstaller {
                 exit 1
             }
 
+            fail_after_install() {
+                if [ -d "$backup_app" ]; then
+                    rollback "$1"
+                fi
+                report_failure "$1"
+                /usr/bin/open "$current_app" >/dev/null 2>&1 || true
+                /bin/rm -rf "$work_dir"
+                exit 1
+            }
+
+            install_in_place_without_backup() {
+                echo "Backup move failed; trying in-place rsync replacement"
+                if /usr/bin/rsync -a --delete "$downloaded_app/" "$current_app/"; then
+                    return 0
+                fi
+                return 1
+            }
+
             updated_app_is_running() {
                 for pid in $(/usr/bin/pgrep -x NetSpeedMonitor 2>/dev/null); do
                     command_path=$(/bin/ps -ww -p "$pid" -o comm= 2>/dev/null || true)
@@ -127,20 +145,27 @@ final class UpdateInstaller {
 
             if [ -d "$current_app" ]; then
                 echo "Backing up $current_app"
-                /bin/mv "$current_app" "$backup_app" || {
-                    report_failure "The installed application could not be moved for replacement."
-                    /usr/bin/open "$current_app" >/dev/null 2>&1 || true
-                    exit 12
+                move_error=$(/bin/mv "$current_app" "$backup_app" 2>&1) || {
+                    echo "Backup move failed: $move_error"
+                    install_in_place_without_backup || {
+                        report_failure "The installed application could not be replaced: $move_error"
+                        /usr/bin/open "$current_app" >/dev/null 2>&1 || true
+                        /bin/rm -rf "$work_dir"
+                        exit 12
+                    }
+                    installed_without_backup=1
                 }
             fi
 
-            echo "Installing $downloaded_app"
-            /usr/bin/ditto "$downloaded_app" "$current_app" || rollback "The new application could not be copied."
+            if [ "${installed_without_backup:-0}" != "1" ]; then
+                echo "Installing $downloaded_app"
+                /usr/bin/ditto "$downloaded_app" "$current_app" || rollback "The new application could not be copied."
+            fi
             /usr/bin/xattr -rd com.apple.quarantine "$current_app" 2>/dev/null || true
             /bin/chmod -R u+rwX,go+rX "$current_app" 2>/dev/null || true
             /bin/chmod +x "$current_app/Contents/MacOS/NetSpeedMonitor" 2>/dev/null || true
-            /usr/bin/codesign --verify --deep --strict "$current_app" >/dev/null 2>&1 || rollback "The installed update failed signature verification."
-            /usr/bin/open "$current_app" >/dev/null 2>&1 || rollback "The updated application could not be restarted."
+            /usr/bin/codesign --verify --deep --strict "$current_app" >/dev/null 2>&1 || fail_after_install "The installed update failed signature verification."
+            /usr/bin/open "$current_app" >/dev/null 2>&1 || fail_after_install "The updated application could not be restarted."
             launched=0
             for attempt in {1..10}; do
                 if updated_app_is_running; then
@@ -149,7 +174,7 @@ final class UpdateInstaller {
                 fi
                 sleep 0.5
             done
-            [ "$launched" -eq 1 ] || rollback "The updated application exited immediately after launch."
+            [ "$launched" -eq 1 ] || fail_after_install "The updated application exited immediately after launch."
 
             echo "Update completed successfully"
             /bin/rm -f "$error_file"
