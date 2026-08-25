@@ -15,9 +15,12 @@ if [[ -z "$version" || -z "$build" || -z "$minimum_macos" ]]; then
   exit 1
 fi
 
-if [[ "${1:-}" == "tag" && "${2:-}" != "v${version}" ]]; then
-  echo "Tag ${2:-<missing>} does not match Version.xcconfig (v${version})" >&2
-  exit 1
+if [[ "${1:-}" == "tag" ]]; then
+  tag=${2:-}
+  if [[ "$tag" != "v${version}" && "$tag" != "v${version}-"* ]]; then
+    echo "Tag ${tag:-<missing>} does not match Version.xcconfig (v${version} or v${version}-*)" >&2
+    exit 1
+  fi
 fi
 
 grep -Fq "macOS ${display_macos} and later" README.md || {

@@ -8,6 +8,7 @@ let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "elegrac
 private enum UDKeys {
     static let selectedInterface = "SelectedInterfaceName"
     static let updateInterval = "NetSpeedUpdateInterval"
+    static let updateChannel = "NetSpeedUpdateChannel"
 }
 
 class MenuSpacerView: NSView {
@@ -39,7 +40,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let netTrafficStat = NetTrafficStatReceiver()
 
     private var aboutWindow: NSWindow?
-    private lazy var updateController = UpdateController(appVersion: appVersion, githubRepo: githubRepo)
+    private var settingsWindow: NSWindow?
+    private var updateChannelPopUp: NSPopUpButton?
+    private lazy var updateController = UpdateController(appVersion: appVersion, githubRepo: githubRepo) { [weak self] in
+        self?.updateChannel ?? .stable
+    }
 
     private var isMenuOpen: Bool = false
     private var latestSpeeds: [String: (down: Double, up: Double, isUp: Bool)] = [:]
@@ -122,6 +127,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         configurePlainMenuItem(checkUpdateItem)
         menu.addItem(checkUpdateItem)
 
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(showSettings(_:)), keyEquivalent: ",")
+        settingsItem.target = self
+        configurePlainMenuItem(settingsItem)
+        menu.addItem(settingsItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let aboutItem = NSMenuItem(title: "About", action: #selector(showAbout(_:)), keyEquivalent: "")
@@ -172,6 +182,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             stopTimer()
             startTimer()
         }
+    }
+
+    private var updateChannel: AppSettings.UpdateChannel {
+        get { AppSettings.normalizedUpdateChannel(UserDefaults.standard.string(forKey: UDKeys.updateChannel)) }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: UDKeys.updateChannel) }
     }
 
     // MARK: - Timer
@@ -434,6 +449,96 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func checkUpdate(_ sender: NSMenuItem) {
         menu.cancelTracking()
         updateController.start()
+    }
+
+    @objc private func showSettings(_ sender: NSMenuItem) {
+        menu.cancelTracking()
+        if let settingsWindow {
+            syncSettingsControls()
+            settingsWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 170),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "NetSpeedMonitor Settings"
+        window.titleVisibility = .visible
+        window.titlebarAppearsTransparent = false
+        window.hasShadow = true
+        window.isMovableByWindowBackground = false
+        window.isReleasedWhenClosed = false
+
+        let contentView = NSVisualEffectView(frame: window.contentView?.bounds ?? .zero)
+        contentView.material = .popover
+        contentView.blendingMode = .behindWindow
+        contentView.state = .active
+        contentView.wantsLayer = true
+        window.contentView = contentView
+
+        let titleLabel = NSTextField(labelWithString: "Software Update")
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.font = NSFont.boldSystemFont(ofSize: 15)
+        contentView.addSubview(titleLabel)
+
+        let channelLabel = NSTextField(labelWithString: "Update channel:")
+        channelLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(channelLabel)
+
+        let popUp = NSPopUpButton(frame: .zero, pullsDown: false)
+        popUp.translatesAutoresizingMaskIntoConstraints = false
+        popUp.target = self
+        popUp.action = #selector(updateChannelChanged(_:))
+        for channel in AppSettings.UpdateChannel.allCases {
+            popUp.addItem(withTitle: channel.title)
+            popUp.lastItem?.representedObject = channel.rawValue
+        }
+        contentView.addSubview(popUp)
+        updateChannelPopUp = popUp
+
+        let helpLabel = NSTextField(labelWithString: "Default is Release Only. Choose pre-releases only when you want to test builds before they become official.")
+        helpLabel.translatesAutoresizingMaskIntoConstraints = false
+        helpLabel.maximumNumberOfLines = 3
+        helpLabel.lineBreakMode = .byWordWrapping
+        helpLabel.textColor = .secondaryLabelColor
+        contentView.addSubview(helpLabel)
+
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            channelLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 18),
+            channelLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            popUp.centerYAnchor.constraint(equalTo: channelLabel.centerYAnchor),
+            popUp.leadingAnchor.constraint(equalTo: channelLabel.trailingAnchor, constant: 12),
+            popUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            helpLabel.topAnchor.constraint(equalTo: channelLabel.bottomAnchor, constant: 18),
+            helpLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            helpLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+        ])
+
+        settingsWindow = window
+        syncSettingsControls()
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc private func updateChannelChanged(_ sender: NSPopUpButton) {
+        guard let rawValue = sender.selectedItem?.representedObject as? String else { return }
+        updateChannel = AppSettings.normalizedUpdateChannel(rawValue)
+    }
+
+    private func syncSettingsControls() {
+        let rawValue = updateChannel.rawValue
+        for item in updateChannelPopUp?.itemArray ?? [] where item.representedObject as? String == rawValue {
+            updateChannelPopUp?.select(item)
+            break
+        }
     }
 
     @objc private func showAbout(_ sender: NSMenuItem) {

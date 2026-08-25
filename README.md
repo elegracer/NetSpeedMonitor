@@ -10,7 +10,8 @@ NetSpeedMonitor is a minimal menu bar app for macOS 26 and later. It reads per-i
 4. Automatically follow the effective network interface when a VPN connects or disconnects.
 5. Inspect all active interfaces or pin the display to a specific interface.
 6. Check for, download, verify, and install GitHub releases in the app.
-7. View the current version, project link, and author from About.
+7. Choose whether update checks include GitHub pre-releases. The default channel only checks official releases.
+8. View the current version, project link, and author from About.
 
 ## Install
 

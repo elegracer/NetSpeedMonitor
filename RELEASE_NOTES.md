@@ -2,11 +2,13 @@
 
 ## What's New
 
-- Removes App Sandbox from the ad-hoc release build so the updater helper can replace the app in `/Applications`.
+- Adds a Settings window with an update channel selector.
+- Defaults update checks to official releases only.
+- Allows testers to opt in to GitHub pre-release updates.
 
 ## Fixes
 
-- Fixes update failures where macOS denied app replacement with `Operation not permitted`.
+- Marks tags with a suffix, such as `v1.18-beta.1`, as GitHub pre-releases so they do not interrupt stable users.
 
 ## Requirements
 

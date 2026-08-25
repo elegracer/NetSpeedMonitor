@@ -8,6 +8,9 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
 }
 
 expect(AppSettings.updateIntervals == [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60], "update interval presets")
+expect(AppSettings.normalizedUpdateChannel(nil) == .stable, "default update channel")
+expect(AppSettings.normalizedUpdateChannel("prerelease") == .prerelease, "prerelease update channel")
+expect(AppSettings.normalizedUpdateChannel("invalid") == .stable, "invalid update channel migration")
 expect(AppSettings.normalizedUpdateInterval(0) == 1, "zero interval migration")
 expect(AppSettings.normalizedUpdateInterval(7) == 5, "custom interval migration")
 expect(AppSettings.normalizedUpdateInterval(55) == 50, "tie uses lower interval")
