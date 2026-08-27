@@ -1,19 +1,17 @@
 import Cocoa
 
 final class UpdateController: NSObject {
-    private struct Release {
-        let version: String
-        let tag: String
-        let isPrerelease: Bool
-        let downloadURL: URL
-        let checksumURL: URL
-    }
-
+    private static let maximumDownloadSize: Int64 = 200 * 1024 * 1024
     private let appVersion: String
     private let githubRepo: String
     private let updateChannelProvider: () -> AppSettings.UpdateChannel
+    private let releaseProvider = ReleaseProvider()
+    private var currentReleaseVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "NetSpeedMonitorReleaseTag") as? String ?? appVersion
+    }
     private lazy var installer = UpdateInstaller(
         currentVersion: appVersion,
+        currentReleaseTag: currentReleaseVersion,
         currentAppPath: Bundle.main.bundlePath,
         currentProcessID: ProcessInfo.processInfo.processIdentifier
     )
@@ -28,8 +26,11 @@ final class UpdateController: NSObject {
     private var checkTask: URLSessionDataTask?
     private var downloadTask: URLSessionDownloadTask?
     private var sessionID: UUID?
-    private var pendingRelease: Release?
+    private var pendingRelease: ReleaseDescriptor?
     private var preparedUpdate: PreparedUpdate?
+    private var silentCheck = false
+    private static let automaticCheckInterval: TimeInterval = 24 * 60 * 60
+    private static let lastAutomaticCheckKey = "NetSpeedLastAutomaticUpdateCheck"
 
     init(appVersion: String, githubRepo: String, updateChannelProvider: @escaping () -> AppSettings.UpdateChannel) {
         self.appVersion = appVersion
@@ -38,17 +39,26 @@ final class UpdateController: NSObject {
     }
 
     func start() {
+        start(silent: false)
+    }
+
+    private func start(silent: Bool) {
         resetSession(closeWindow: false)
+        silentCheck = silent
         sessionID = UUID()
         let channel = updateChannelProvider()
-        showWindow(title: "Checking for Updates", message: "Checking GitHub \(channel.title.lowercased())...", progress: nil)
-        setButtons(primaryTitle: nil, primaryAction: nil, secondaryTitle: nil, secondaryAction: nil)
-        switch channel {
-        case .stable:
-            checkLatestStableRelease()
-        case .prerelease:
-            checkLatestPrereleaseOrStable()
+        if !silent {
+            showWindow(title: "Checking for Updates", message: "Checking GitHub \(channel.title.lowercased())...", progress: nil)
+            setButtons(primaryTitle: nil, primaryAction: nil, secondaryTitle: nil, secondaryAction: nil)
         }
+        checkReleases(includePrereleases: channel == .prerelease)
+    }
+
+    func checkAutomaticallyIfNeeded(now: Date = Date()) {
+        let defaults = UserDefaults.standard
+        if let last = defaults.object(forKey: Self.lastAutomaticCheckKey) as? Date, now.timeIntervalSince(last) < Self.automaticCheckInterval { return }
+        defaults.set(now, forKey: Self.lastAutomaticCheckKey)
+        start(silent: true)
     }
 
     func showPendingErrorIfNeeded() {
@@ -61,104 +71,47 @@ final class UpdateController: NSObject {
         }
     }
 
-    private func checkLatestStableRelease() {
-        guard let sessionID, let url = URL(string: "https://github.com/\(githubRepo)/releases/latest") else {
-            showFailure("Invalid GitHub release URL.")
+    private func checkReleases(includePrereleases: Bool) {
+        guard let sessionID else { return }
+        if let retry = releaseProvider.retryAfter(repo: githubRepo), retry > Date() {
+            if silentCheck { resetSession(closeWindow: false) }
+            else { showFailure("GitHub rate limit reached. Try again after \(retry.formatted()).") }
             return
         }
-
-        var request = URLRequest(url: url)
-        request.setValue("NetSpeedMonitor/\(appVersion)", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 15
-        let task = URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+        checkTask = releaseProvider.fetch(repo: githubRepo, includePrereleases: includePrereleases, userAgent: "NetSpeedMonitor/\(appVersion)") { [weak self] result in
             DispatchQueue.main.async {
                 guard let self, self.sessionID == sessionID else { return }
-                if let error {
-                    self.showFailure("Could not check for updates: \(error.localizedDescription)")
-                    return
+                switch result {
+                case .success(let release):
+                    let channel = includePrereleases ? AppSettings.UpdateChannel.prerelease : .stable
+                    self.handleSelectedRelease(release, channelTitle: channel.title)
+                case .failure(let error):
+                    if self.silentCheck {
+                        logger.warning("Automatic update check failed: \(error.localizedDescription)")
+                        self.resetSession(closeWindow: false)
+                    }
+                    else { self.showFailure(error.localizedDescription) }
                 }
-                guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else {
-                    self.showFailure("GitHub returned an unexpected response (HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)).")
-                    return
-                }
-                guard let finalURL = response.url,
-                      finalURL.pathComponents.contains("tag"),
-                      let tag = finalURL.pathComponents.last,
-                      tag.hasPrefix("v"),
-                      let release = Self.releaseFromTag(tag, isPrerelease: false, githubRepo: self.githubRepo) else {
-                    self.showFailure("Could not determine the latest release version.")
-                    return
-                }
-                self.handleSelectedRelease(release, channelTitle: AppSettings.UpdateChannel.stable.title)
             }
         }
-        checkTask = task
-        task.resume()
     }
 
-    private func checkLatestPrereleaseOrStable() {
-        guard let sessionID, let url = URL(string: "https://github.com/\(githubRepo)/releases") else {
-            showFailure("Invalid GitHub release URL.")
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.setValue("NetSpeedMonitor/\(appVersion)", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 15
-        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            DispatchQueue.main.async {
-                guard let self, self.sessionID == sessionID else { return }
-                if let error {
-                    self.showFailure("Could not check for updates: \(error.localizedDescription)")
-                    return
-                }
-                guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else {
-                    self.showFailure("GitHub returned an unexpected response (HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)).")
-                    return
-                }
-
-                guard let data, let html = String(data: data, encoding: .utf8) else {
-                    self.showFailure("No release page received.")
-                    return
-                }
-
-                guard let tag = AppSettings.newestReleaseTag(from: AppSettings.releaseTags(in: html), includePrereleases: true),
-                      let release = Self.releaseFromTag(tag, isPrerelease: AppSettings.isPrereleaseTag(tag), githubRepo: self.githubRepo) else {
-                    self.showFailure("Could not find a usable GitHub release or pre-release on the releases page.")
-                    return
-                }
-
-                self.handleSelectedRelease(release, channelTitle: AppSettings.UpdateChannel.prerelease.title)
-            }
-        }
-        checkTask = task
-        task.resume()
-    }
-
-    private func handleSelectedRelease(_ release: Release, channelTitle: String) {
-        switch AppSettings.compareVersions(appVersion, release.version) {
+    private func handleSelectedRelease(_ release: ReleaseDescriptor, channelTitle: String) {
+        switch AppSettings.compareVersions(currentReleaseVersion, release.tag) {
         case .orderedAscending:
             pendingRelease = release
             let releaseType = release.isPrerelease ? "pre-release" : "release"
-            showWindow(title: "Update Available", message: "Version \(release.version) (\(releaseType)) is available.\nCurrent version: \(appVersion)", progress: nil)
+            showWindow(title: "Update Available", message: "Version \(release.tag) (\(releaseType)) is available.\nCurrent version: \(currentReleaseVersion)", progress: nil)
             setButtons(primaryTitle: "Download", primaryAction: #selector(startDownload(_:)), secondaryTitle: "Cancel", secondaryAction: #selector(close(_:)))
         case .orderedSame:
-            showWindow(title: "Up to Date", message: "You are running the latest version for \(channelTitle.lowercased()) (\(appVersion)).", progress: nil)
+            if silentCheck { resetSession(closeWindow: false); return }
+            showWindow(title: "Up to Date", message: "You are running the latest version for \(channelTitle.lowercased()) (\(currentReleaseVersion)).", progress: nil)
             setButtons(primaryTitle: "OK", primaryAction: #selector(close(_:)), secondaryTitle: nil, secondaryAction: nil)
         case .orderedDescending:
-            showWindow(title: "Up to Date", message: "You are running version \(appVersion), which is newer than the latest release (\(release.version)).", progress: nil)
+            if silentCheck { resetSession(closeWindow: false); return }
+            showWindow(title: "Up to Date", message: "You are running version \(currentReleaseVersion), which is newer than the latest release (\(release.tag)).", progress: nil)
             setButtons(primaryTitle: "OK", primaryAction: #selector(close(_:)), secondaryTitle: nil, secondaryAction: nil)
         }
-    }
-
-    private static func releaseFromTag(_ tag: String, isPrerelease: Bool, githubRepo: String) -> Release? {
-        let base = "https://github.com/\(githubRepo)/releases/download/\(tag)"
-        guard let downloadURL = URL(string: "\(base)/NetSpeedMonitor.zip"),
-              let checksumURL = URL(string: "\(base)/NetSpeedMonitor.sha256") else {
-            return nil
-        }
-        guard let version = AppSettings.appVersion(fromReleaseTag: tag) else { return nil }
-        return Release(version: version, tag: tag, isPrerelease: isPrerelease, downloadURL: downloadURL, checksumURL: checksumURL)
     }
 
     @objc private func startDownload(_ sender: NSButton) {
@@ -169,7 +122,26 @@ final class UpdateController: NSObject {
         showWindow(title: "Downloading Update", message: "Downloading update... 0%", progress: 0)
         setButtons(primaryTitle: nil, primaryAction: nil, secondaryTitle: nil, secondaryAction: nil)
 
-        let task = URLSession.shared.downloadTask(with: release.downloadURL) { [weak self] tempURL, _, error in
+        var signatureRequest = URLRequest(url: release.signatureURL)
+        signatureRequest.timeoutInterval = 15
+        let signatureTask = URLSession.shared.dataTask(with: signatureRequest) { [weak self] signatureData, signatureResponse, signatureError in
+            guard let self else { return }
+            guard signatureError == nil,
+                  let signatureResponse = signatureResponse as? HTTPURLResponse,
+                  (200...299).contains(signatureResponse.statusCode),
+                  let signatureData, signatureData.count <= 1024,
+                  let signatureBase64 = String(data: signatureData, encoding: .utf8) else {
+                self.onMain(sessionID) { $0.showFailure("Could not download a valid release signature.") }
+                return
+            }
+            self.download(release: release, signatureBase64: signatureBase64, sessionID: sessionID)
+        }
+        checkTask = signatureTask
+        signatureTask.resume()
+    }
+
+    private func download(release: ReleaseDescriptor, signatureBase64: String, sessionID: UUID) {
+        let task = URLSession.shared.downloadTask(with: release.downloadURL) { [weak self] tempURL, response, error in
             guard let self else { return }
             if let error {
                 self.onMain(sessionID) { $0.showFailure("Could not download update: \(error.localizedDescription)") }
@@ -177,6 +149,18 @@ final class UpdateController: NSObject {
             }
             guard let tempURL else {
                 self.onMain(sessionID) { $0.showFailure("No data received.") }
+                return
+            }
+            guard let response = response as? HTTPURLResponse,
+                  (200...299).contains(response.statusCode),
+                  response.expectedContentLength <= Self.maximumDownloadSize else {
+                self.onMain(sessionID) { $0.showFailure("GitHub returned an invalid or oversized update.") }
+                return
+            }
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: tempURL.path),
+                  let fileSize = attributes[.size] as? NSNumber,
+                  fileSize.int64Value > 0, fileSize.int64Value <= Self.maximumDownloadSize else {
+                self.onMain(sessionID) { $0.showFailure("The downloaded update is empty or too large.") }
                 return
             }
 
@@ -196,8 +180,9 @@ final class UpdateController: NSObject {
                     try self.installer.prepare(
                         downloadedZip: stableZip,
                         workDirectory: workDirectory,
-                        expectedDigest: nil,
-                        checksumURLString: release.checksumURL.absoluteString
+                        expectedDigest: release.digest,
+                        signatureBase64: signatureBase64,
+                        targetReleaseTag: release.tag
                     )
                 }
                 self.onMain(sessionID) { controller in
@@ -379,6 +364,7 @@ final class UpdateController: NSObject {
         sessionID = nil
         pendingRelease = nil
         preparedUpdate = nil
+        silentCheck = false
         if closeWindow {
             window?.close()
             window = nil

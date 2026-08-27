@@ -38,4 +38,20 @@ if grep -Eq 'MARKETING_VERSION =|CURRENT_PROJECT_VERSION =|MACOSX_DEPLOYMENT_TAR
   exit 1
 fi
 
+grep -Fq '<key>NetSpeedMonitorReleaseTag</key>' NetSpeedMonitor/Info.plist || {
+  echo "Info.plist must expose NetSpeedMonitorReleaseTag for pre-release comparisons" >&2
+  exit 1
+}
+
+grep -Fq 'NETSPEED_RELEASE_TAG = v$(MARKETING_VERSION)' Version.xcconfig || {
+  echo "Version.xcconfig must define the default release tag" >&2
+  exit 1
+}
+
+public_key=$(sed -n 's/.*publicKeyBase64 = "\([^"]*\)".*/\1/p' NetSpeedMonitor/ReleaseSignature.swift)
+grep -Fq "publicKeyBase64 = \"${public_key}\"" scripts/verify-release.swift || {
+  echo "Pinned release public keys differ between app and verifier" >&2
+  exit 1
+}
+
 echo "Version ${version} (${build}), minimum macOS ${minimum_macos}"

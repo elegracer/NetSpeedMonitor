@@ -11,23 +11,22 @@ using clock_type = std::chrono::steady_clock;
 using duration_type = std::chrono::nanoseconds;
 using time_point_type = std::chrono::time_point<clock_type, duration_type>;
 
-inline int64_t counter_delta(uint32_t current, uint32_t previous) {
-    if (current < previous) {
-        return static_cast<int64_t>(current) + (static_cast<int64_t>(1) << 32) - previous;
-    }
-    return static_cast<int64_t>(current) - previous;
+inline uint64_t counter_delta(uint64_t current, uint64_t previous) {
+    // The kernel exposes 64-bit counters through NET_RT_IFLIST2. A decrease is
+    // therefore a counter reset (interface recreation/driver reset), not a wrap.
+    return current >= previous ? current - previous : 0;
 }
 
 struct NetTrafficStat {
     time_point_type tp_retrieval; // time_point where this stat is retrieved
-    uint32_t ifi_ibytes = 0;      // raw ifi_ibytes message
-    uint32_t ifi_obytes = 0;      // raw ifi_obytes message
-    int64_t total_ibytes = 0;     // i.e. ifi_ibytes accumulated in wider int type
-    int64_t total_obytes = 0;     // i.e. ifi_obytes accumulated in wider int type
+    uint64_t ifi_ibytes = 0;      // raw 64-bit byte counter
+    uint64_t ifi_obytes = 0;      // raw 64-bit byte counter
+    uint64_t total_ibytes = 0;
+    uint64_t total_obytes = 0;
 
     double delta_ts_sec = 0.0;
-    int64_t delta_ibytes = 0; // difference between 2 consecutive total_ibytes
-    int64_t delta_obytes = 0; // difference between 2 consecutive total_obytes
+    uint64_t delta_ibytes = 0;
+    uint64_t delta_obytes = 0;
     double ibytes_per_sec = 0.0;
     double obytes_per_sec = 0.0;
     bool is_up = false;

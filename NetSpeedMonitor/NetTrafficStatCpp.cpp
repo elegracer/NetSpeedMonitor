@@ -1,5 +1,6 @@
 #include "NetTrafficStatCpp.hpp"
 
+#include <cstring>
 #include <limits>
 #include <net/if.h>
 #include <net/if_dl.h>
@@ -9,7 +10,7 @@
 int NetTrafficStatGenerator::update() {
 
     // Get sizing info from sysctl and alloc memory
-    int mib[] = {CTL_NET, PF_ROUTE, 0, 0, NET_RT_IFLIST, 0};
+    int mib[] = {CTL_NET, PF_ROUTE, 0, 0, NET_RT_IFLIST2, 0};
     size_t data_bytes = 0;
     if (sysctl(mib, 6, nullptr, &data_bytes, nullptr, 0) != 0) {
         return 1;
@@ -30,27 +31,44 @@ int NetTrafficStatGenerator::update() {
     uint8_t* data_ptr_cur = sysctl_buffer_ptr;
     uint8_t* const data_ptr_end = sysctl_buffer_ptr + data_bytes;
     while (data_ptr_cur < data_ptr_end) {
-        // Expecting interface data
-        if_msghdr* ifmsg = (struct if_msghdr*)data_ptr_cur;
-        if (ifmsg->ifm_type != RTM_IFINFO) {
-            data_ptr_cur += ifmsg->ifm_msglen;
+        const size_t remaining = static_cast<size_t>(data_ptr_end - data_ptr_cur);
+        if (remaining < sizeof(uint16_t) + 2 * sizeof(uint8_t)) {
+            return 1;
+        }
+
+        uint16_t message_length = 0;
+        memcpy(&message_length, data_ptr_cur, sizeof(message_length));
+        const uint8_t message_type = data_ptr_cur[3];
+        if (message_length < sizeof(uint16_t) + 2 * sizeof(uint8_t) || message_length > remaining) {
+            return 1;
+        }
+        uint8_t* const next_message = data_ptr_cur + message_length;
+        if (message_type != RTM_IFINFO2) {
+            data_ptr_cur = next_message;
             continue;
         }
+        if (message_length < sizeof(if_msghdr2)) {
+            return 1;
+        }
+        const auto* ifmsg = reinterpret_cast<const if_msghdr2*>(data_ptr_cur);
         // Must not be loopback
         if (ifmsg->ifm_flags & IFF_LOOPBACK) {
-            data_ptr_cur += ifmsg->ifm_msglen;
+            data_ptr_cur = next_message;
             continue;
         }
         // Only look at link layer items
-        sockaddr_dl* sdl = (struct sockaddr_dl*)(ifmsg + 1);
-        if (sdl->sdl_family != AF_LINK) {
-            data_ptr_cur += ifmsg->ifm_msglen;
+        const auto* sdl = reinterpret_cast<const sockaddr_dl*>(ifmsg + 1);
+        const auto* sdl_bytes = reinterpret_cast<const uint8_t*>(sdl);
+        if (sdl_bytes + offsetof(sockaddr_dl, sdl_data) > next_message ||
+            sdl->sdl_family != AF_LINK ||
+            sdl_bytes + offsetof(sockaddr_dl, sdl_data) + sdl->sdl_nlen > next_message) {
+            data_ptr_cur = next_message;
             continue;
         }
         // Get the interface name
         const auto interface_name = std::string(sdl->sdl_data, sdl->sdl_nlen);
         if (interface_name.empty()) {
-            data_ptr_cur += ifmsg->ifm_msglen;
+            data_ptr_cur = next_message;
             continue;
         }
 
@@ -74,8 +92,15 @@ int NetTrafficStatGenerator::update() {
             net_traffic_stat.delta_ts_sec =
                 std::chrono::duration<double>(net_traffic_stat.tp_retrieval - last_net_traffic_stat.tp_retrieval)
                     .count();
-            net_traffic_stat.ibytes_per_sec = net_traffic_stat.delta_ibytes / (net_traffic_stat.delta_ts_sec + 1e-3);
-            net_traffic_stat.obytes_per_sec = net_traffic_stat.delta_obytes / (net_traffic_stat.delta_ts_sec + 1e-3);
+            if (net_traffic_stat.delta_ts_sec >= 0.05) {
+                net_traffic_stat.ibytes_per_sec =
+                    static_cast<double>(net_traffic_stat.delta_ibytes) / net_traffic_stat.delta_ts_sec;
+                net_traffic_stat.obytes_per_sec =
+                    static_cast<double>(net_traffic_stat.delta_obytes) / net_traffic_stat.delta_ts_sec;
+            } else {
+                net_traffic_stat.ibytes_per_sec = 0.0;
+                net_traffic_stat.obytes_per_sec = 0.0;
+            }
         } else {
             net_traffic_stat.tp_retrieval = tp_retrieval;
             net_traffic_stat.ifi_ibytes = ifmsg->ifm_data.ifi_ibytes;
@@ -92,7 +117,7 @@ int NetTrafficStatGenerator::update() {
         }
 
         // Continue on
-        data_ptr_cur += ifmsg->ifm_msglen;
+        data_ptr_cur = next_message;
     }
 
     // Remove interfaces that are no longer present in this update

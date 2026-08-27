@@ -10,6 +10,8 @@ private enum UDKeys {
     static let updateInterval = "NetSpeedUpdateInterval"
     static let updateChannel = "NetSpeedUpdateChannel"
     static let integerSmallUnits = "NetSpeedIntegerSmallUnits"
+    static let displayMode = "NetSpeedDisplayMode"
+    static let unitMode = "NetSpeedUnitMode"
 }
 
 class MenuSpacerView: NSView {
@@ -39,11 +41,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var timer: Timer?
     private let netTrafficStat = NetTrafficStatReceiver()
+    private let trafficHistory = TrafficHistory()
 
     private var aboutWindow: NSWindow?
     private var settingsWindow: NSWindow?
+    private var statisticsWindow: NSWindow?
     private var updateChannelPopUp: NSPopUpButton?
     private var integerSmallUnitsButton: NSButton?
+    private var displayModePopUp: NSPopUpButton?
+    private var unitModePopUp: NSPopUpButton?
     private lazy var updateController = UpdateController(appVersion: appVersion, githubRepo: githubRepo) { [weak self] in
         self?.updateChannel ?? .stable
     }
@@ -52,7 +58,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var latestSpeeds: [String: (down: Double, up: Double, isUp: Bool)] = [:]
 
     private var activeAutoInterfaceName: String?
-    private var routeConnection: NWConnection?
+    private var routeMonitor: NWPathMonitor?
+    private var powerObserver: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -71,7 +79,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         updateInterfaceCheckmarks()
         startRouteMonitoring()
         startTimer()
+        tick()
+        startSystemObservers()
         updateController.showPendingErrorIfNeeded()
+        updateController.checkAutomaticallyIfNeeded()
     }
 
     // MARK: - Menu Construction
@@ -120,6 +131,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let activityItem = NSMenuItem(title: "Open Activity Monitor", action: #selector(openActivityMonitor(_:)), keyEquivalent: "")
         activityItem.target = self
         menu.addItem(activityItem)
+        let statisticsItem = NSMenuItem(title: "Session Statistics", action: #selector(showSessionStatistics(_:)), keyEquivalent: "")
+        statisticsItem.target = self
+        menu.addItem(statisticsItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -165,7 +179,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         set {
             UserDefaults.standard.set(newValue, forKey: UDKeys.selectedInterface)
             updateInterfaceCheckmarks()
-            tick()
+            renderLatestSpeeds()
         }
     }
 
@@ -194,45 +208,61 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         get { AppSettings.normalizedIntegerSmallUnits(UserDefaults.standard.object(forKey: UDKeys.integerSmallUnits)) }
         set {
             UserDefaults.standard.set(newValue, forKey: UDKeys.integerSmallUnits)
-            tick()
+            renderLatestSpeeds()
         }
+    }
+
+    private var displayMode: AppSettings.DisplayMode {
+        get { AppSettings.normalizedDisplayMode(UserDefaults.standard.string(forKey: UDKeys.displayMode)) }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: UDKeys.displayMode); renderLatestSpeeds() }
+    }
+
+    private var unitMode: AppSettings.UnitMode {
+        get { AppSettings.normalizedUnitMode(UserDefaults.standard.string(forKey: UDKeys.unitMode)) }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: UDKeys.unitMode); renderLatestSpeeds() }
     }
 
     // MARK: - Timer
 
     private func startRouteMonitoring() {
-        routeConnection?.cancel()
-        let connection = NWConnection(host: "1.1.1.1", port: 53, using: .udp)
-        connection.pathUpdateHandler = { [weak self] path in
+        routeMonitor?.cancel()
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
             guard let self else { return }
-            let interfaceName = path.availableInterfaces.first?.name
-            if self.activeAutoInterfaceName != interfaceName {
-                self.activeAutoInterfaceName = interfaceName
-                logger.info("Effective route interface: \(interfaceName ?? "unavailable", privacy: .public)")
-                self.updateInterfaceCheckmarks()
-                self.tick()
-            }
-        }
-        connection.stateUpdateHandler = { [weak self, weak connection] state in
-            if case .failed(let error) = state {
-                logger.warning("Route monitoring failed: \(error.localizedDescription)")
-                guard let self, self.routeConnection === connection else { return }
-                self.routeConnection = nil
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-                    self?.startRouteMonitoring()
+            DispatchQueue.main.async {
+                let interfaceName = RouteInterfaceResolver.currentDefaultInterface()
+                    ?? path.availableInterfaces.first(where: { path.usesInterfaceType($0.type) })?.name
+                if self.activeAutoInterfaceName != interfaceName {
+                    self.activeAutoInterfaceName = interfaceName
+                    logger.info("Effective route interface: \(interfaceName ?? "unavailable", privacy: .public)")
+                    self.updateInterfaceCheckmarks()
+                    self.renderLatestSpeeds()
                 }
             }
         }
-        connection.start(queue: .main)
-        routeConnection = connection
+        monitor.start(queue: DispatchQueue(label: "com.elegracer.NetSpeedMonitor.route"))
+        routeMonitor = monitor
     }
 
     private func startTimer() {
-        let interval = TimeInterval(updateInterval)
+        let configured = TimeInterval(updateInterval)
+        let interval = ProcessInfo.processInfo.isLowPowerModeEnabled ? max(5, configured) : configured
         let timer = Timer.scheduledTimer(timeInterval: interval, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
         RunLoop.current.add(timer, forMode: .common)
         self.timer = timer
         logger.info("Timer started interval=\(interval)")
+    }
+
+    private func startSystemObservers() {
+        powerObserver = NotificationCenter.default.addObserver(forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main) { [weak self] _ in
+            self?.stopTimer(); self?.startTimer()
+        }
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            self.netTrafficStat.reset()
+            self.trafficHistory.reset()
+            self.tick()
+        }
     }
 
     private func stopTimer() {
@@ -271,14 +301,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         latestSpeeds = speeds
+        let displayed = displayedSpeed(from: speeds)
+        trafficHistory.append(download: displayed.down, upload: displayed.up)
         let activeIfaces = speeds.keys.sorted()
 
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            let doStructure = !self.isMenuOpen
-            self.updateIcon(with: speeds)
-            self.syncInterfaceMenu(with: activeIfaces, speeds: speeds, structuralChanges: doStructure)
-        }
+        renderLatestSpeeds(activeIfaces: activeIfaces)
+    }
+
+    private func renderLatestSpeeds(activeIfaces: [String]? = nil) {
+        let speeds = latestSpeeds
+        let ifaces = activeIfaces ?? speeds.keys.sorted()
+        let doStructure = !isMenuOpen
+        updateIcon(with: speeds)
+        syncInterfaceMenu(with: ifaces, speeds: speeds, structuralChanges: doStructure)
     }
 
     // MARK: - Menu UI Updates
@@ -303,7 +338,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 item.representedObject = name as NSString
 
                 let v = InterfaceItemView(frame: NSRect(x: 0, y: 0, width: 280, height: interfaceItemRowHeight))
-                v.interfaceName = name
+                v.interfaceName = InterfaceNameResolver.displayName(forBSDName: name)
                 v.autoresizingMask = [.width]
                 v.onAction = { [weak self] in
                     self?.selectedInterfaceName = name
@@ -331,7 +366,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if structuralChanges {
             var maxNameW: CGFloat = 0
             for name in interfaceViewsMap.keys {
-                maxNameW = max(maxNameW, InterfaceItemView.measureNameWidth(name))
+                maxNameW = max(maxNameW, InterfaceItemView.measureNameWidth(InterfaceNameResolver.displayName(forBSDName: name)))
             }
 
             let speedColW = InterfaceItemView.measureSpeedWidth(InterfaceItemView.speedSampleText)
@@ -359,12 +394,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if isAutoMode {
             if let activeAutoInterfaceName {
-                interfaceMenuItem.title = "Interface: Auto (\(activeAutoInterfaceName))"
+                interfaceMenuItem.title = "Interface: Auto (\(InterfaceNameResolver.displayName(forBSDName: activeAutoInterfaceName)))"
             } else {
-                interfaceMenuItem.title = "Interface: Auto"
+                interfaceMenuItem.title = "Interface: Auto (Unavailable)"
             }
         } else {
-            interfaceMenuItem.title = "Interface: \(selectedInterfaceName)"
+            let available = latestSpeeds[selectedInterfaceName] != nil
+            interfaceMenuItem.title = available
+                ? "Interface: \(InterfaceNameResolver.displayName(forBSDName: selectedInterfaceName))"
+                : "Interface: \(InterfaceNameResolver.displayName(forBSDName: selectedInterfaceName)) (Unavailable)"
         }
     }
 
@@ -376,28 +414,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Icon Update
 
     private func updateIcon(with speeds: [String: (down: Double, up: Double, isUp: Bool)]) {
-        var downBps: Double = 0
-        var upBps: Double = 0
+        let displayed = displayedSpeed(from: speeds)
+        let downBps = displayed.down
+        let upBps = displayed.up
 
-        if isAutoMode {
-            if let activeAutoInterfaceName, let sp = speeds[activeAutoInterfaceName] {
-                downBps = sp.down
-                upBps = sp.up
-            } else if let sp = speeds.values.max(by: { ($0.down + $0.up) < ($1.down + $1.up) }) {
-                downBps = sp.down
-                upBps = sp.up
-            }
-        } else if let sp = speeds[selectedInterfaceName] {
-            downBps = sp.down
-            upBps = sp.up
+        let text: String
+        switch displayMode {
+        case .both: text = "↑ \(formattedSpeed(upBps))\n↓ \(formattedSpeed(downBps))"
+        case .download: text = "↓ \(formattedSpeed(downBps))"
+        case .upload: text = "↑ \(formattedSpeed(upBps))"
         }
-
-        let text = "↑ \(formattedSpeed(upBps))\n↓ \(formattedSpeed(downBps))"
         statusItem.button?.image = MenuBarIconGenerator.generateIcon(text: text)
+        statusItem.button?.toolTip = "Download \(formattedSpeed(downBps)), upload \(formattedSpeed(upBps))"
+        statusItem.button?.setAccessibilityValue("Download \(formattedSpeed(downBps)), upload \(formattedSpeed(upBps))")
+    }
+
+    private func displayedSpeed(from speeds: [String: (down: Double, up: Double, isUp: Bool)]) -> (down: Double, up: Double) {
+        if isAutoMode, let activeAutoInterfaceName, let speed = speeds[activeAutoInterfaceName] { return (speed.down, speed.up) }
+        if !isAutoMode, let speed = speeds[selectedInterfaceName] { return (speed.down, speed.up) }
+        return (0, 0)
     }
 
     private func formattedSpeed(_ bytesPerSec: Double) -> String {
-        AppSettings.formattedSpeed(bytesPerSecond: bytesPerSec, integerSmallUnits: integerSmallUnits)
+        AppSettings.formattedSpeed(bytesPerSecond: bytesPerSec, integerSmallUnits: integerSmallUnits, unitMode: unitMode)
     }
 
     // MARK: - Menu Actions
@@ -416,8 +455,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             autoLaunchItem.state = service.status == .enabled ? .on : .off
             logger.info("AutoLaunch toggled, now: \(service.status == .enabled)")
+            if service.status == .requiresApproval {
+                let alert = NSAlert()
+                alert.alertStyle = .informational
+                alert.messageText = "Login Item Needs Approval"
+                alert.informativeText = "Allow NetSpeedMonitor in System Settings → General → Login Items."
+                alert.runModal()
+            }
         } catch {
             logger.warning("Failed to toggle auto launch: \(error.localizedDescription)")
+            updateAutoLaunchStateFromSystem()
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "Could Not Change Login Item"
+            alert.informativeText = error.localizedDescription
+            alert.runModal()
         }
     }
 
@@ -434,8 +486,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func showSessionStatistics(_ sender: NSMenuItem) {
+        menu.cancelTracking()
+        let summary = trafficHistory.summary
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        let route = activeAutoInterfaceName.map(InterfaceNameResolver.displayName) ?? "Unavailable"
+        let window = statisticsWindow ?? NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 260), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.title = "Session Statistics"
+        window.isReleasedWhenClosed = false
+        let content = NSView(frame: window.contentView?.bounds ?? .zero)
+        let summaryLabel = NSTextField(wrappingLabelWithString: "Route: \(route)  •  Interval: \(timer?.timeInterval ?? 0)s\nDownloaded \(formatter.string(fromByteCount: Int64(summary.sessionDownloadBytes)))  •  Uploaded \(formatter.string(fromByteCount: Int64(summary.sessionUploadBytes)))\nPeak ↓ \(formattedSpeed(summary.peakDownload))  •  Peak ↑ \(formattedSpeed(summary.peakUpload))")
+        summaryLabel.frame = NSRect(x: 20, y: 184, width: 420, height: 56)
+        let chart = TrafficChartView(frame: NSRect(x: 20, y: 34, width: 420, height: 136))
+        chart.samples = trafficHistory.samples
+        content.addSubview(summaryLabel); content.addSubview(chart)
+        window.contentView = content
+        statisticsWindow = window
+        window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+    }
+
     @objc private func quitApp(_ sender: NSMenuItem) {
         NSApp.terminate(nil)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        stopTimer()
+        routeMonitor?.cancel()
+        routeMonitor = nil
+        if let powerObserver { NotificationCenter.default.removeObserver(powerObserver) }
+        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
     }
 
     // MARK: - Check Update
@@ -461,7 +541,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 220),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -510,6 +590,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contentView.addSubview(integerButton)
         integerSmallUnitsButton = integerButton
 
+        let modePopUp = NSPopUpButton(frame: .zero, pullsDown: false)
+        modePopUp.translatesAutoresizingMaskIntoConstraints = false
+        modePopUp.target = self
+        modePopUp.action = #selector(displayModeChanged(_:))
+        AppSettings.DisplayMode.allCases.forEach { modePopUp.addItem(withTitle: $0.title); modePopUp.lastItem?.representedObject = $0.rawValue }
+        contentView.addSubview(modePopUp)
+        displayModePopUp = modePopUp
+
+        let unitPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
+        unitPopUp.translatesAutoresizingMaskIntoConstraints = false
+        unitPopUp.target = self
+        unitPopUp.action = #selector(unitModeChanged(_:))
+        AppSettings.UnitMode.allCases.forEach { unitPopUp.addItem(withTitle: $0.title); unitPopUp.lastItem?.representedObject = $0.rawValue }
+        contentView.addSubview(unitPopUp)
+        unitModePopUp = unitPopUp
+
         let helpLabel = NSTextField(labelWithString: "Default is Release Only. Choose pre-releases only when you want to test builds before they become official.")
         helpLabel.translatesAutoresizingMaskIntoConstraints = false
         helpLabel.maximumNumberOfLines = 3
@@ -532,7 +628,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             integerButton.topAnchor.constraint(equalTo: displayLabel.bottomAnchor, constant: 10),
             integerButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
             integerButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            helpLabel.topAnchor.constraint(equalTo: integerButton.bottomAnchor, constant: 18),
+            modePopUp.topAnchor.constraint(equalTo: integerButton.bottomAnchor, constant: 12),
+            modePopUp.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            modePopUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            unitPopUp.topAnchor.constraint(equalTo: modePopUp.bottomAnchor, constant: 8),
+            unitPopUp.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            unitPopUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            helpLabel.topAnchor.constraint(equalTo: unitPopUp.bottomAnchor, constant: 14),
             helpLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
             helpLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
         ])
@@ -553,6 +655,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         integerSmallUnits = sender.state == .on
     }
 
+    @objc private func displayModeChanged(_ sender: NSPopUpButton) {
+        displayMode = AppSettings.normalizedDisplayMode(sender.selectedItem?.representedObject as? String)
+    }
+
+    @objc private func unitModeChanged(_ sender: NSPopUpButton) {
+        unitMode = AppSettings.normalizedUnitMode(sender.selectedItem?.representedObject as? String)
+    }
+
     private func syncSettingsControls() {
         let rawValue = updateChannel.rawValue
         for item in updateChannelPopUp?.itemArray ?? [] where item.representedObject as? String == rawValue {
@@ -560,6 +670,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             break
         }
         integerSmallUnitsButton?.state = integerSmallUnits ? .on : .off
+        displayModePopUp?.selectItem(withTitle: displayMode.title)
+        unitModePopUp?.selectItem(withTitle: unitMode.title)
     }
 
     @objc private func showAbout(_ sender: NSMenuItem) {
@@ -655,9 +767,7 @@ extension AppDelegate: NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         isMenuOpen = true
         updateAutoLaunchStateFromSystem()
-        DispatchQueue.main.async { [weak self] in
-            self?.tick()
-        }
+        renderLatestSpeeds()
     }
 
     func menuDidClose(_ menu: NSMenu) {

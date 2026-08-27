@@ -90,3 +90,7 @@ Temporary Items
 .apdisk
 
 build/
+
+# Release signing private keys must never be committed.
+*release-signing-private-key*
+*.private-key

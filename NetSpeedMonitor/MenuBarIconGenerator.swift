@@ -1,12 +1,24 @@
 import AppKit
 
 final class MenuBarIconGenerator {
+    static let horizontalPadding: CGFloat = 4
+    static let minimumWidth: CGFloat = 48
+
+    static func imageSize(
+        for text: String,
+        font: NSFont = .monospacedSystemFont(ofSize: 8, weight: .semibold)
+    ) -> NSSize {
+        let lines = text.components(separatedBy: "\n")
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        let width = lines.map { ceil(($0 as NSString).size(withAttributes: attributes).width) }.max() ?? 0
+        return NSSize(width: max(minimumWidth, width + horizontalPadding * 2), height: lines.count > 1 ? 22 : 18)
+    }
     
     static func generateIcon(
         text: String,
         font: NSFont = .monospacedSystemFont(ofSize: 8, weight: .semibold)
     ) -> NSImage {
-        let image = NSImage(size: NSSize(width: 66, height: 22), flipped: false) { rect in
+        let image = NSImage(size: imageSize(for: text, font: font), flipped: false) { rect in
             
             let style = NSMutableParagraphStyle()
             style.alignment = .right
@@ -22,9 +34,9 @@ final class MenuBarIconGenerator {
             
             let textSize = text.size(withAttributes: attributes)
             let textRect = NSRect(
-                x: (rect.width - textSize.width) / 2,
+                x: Self.horizontalPadding,
                 y: (rect.height - textSize.height) / 2,
-                width: textSize.width,
+                width: rect.width - Self.horizontalPadding * 2,
                 height: textSize.height
             )
             

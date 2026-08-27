@@ -23,7 +23,7 @@ class InterfaceItemView: NSView {
     }
 
     static var speedSampleText: String {
-        return "↓999.99 MB/s  ↑999.99 MB/s"
+        return "↓1023.99 Mbps  ↑1023.99 Mbps"
     }
 
     static var nameStartX: CGFloat { leftMargin + checkSize + gapAfterCheck }
@@ -136,6 +136,8 @@ class InterfaceItemView: NSView {
         checkFallbackField.isSelectable = false
         checkFallbackField.isHidden = !isChecked || (checkImageView.image != nil)
         addSubview(checkFallbackField)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.button)
     }
 
     override func layout() {
@@ -196,6 +198,16 @@ class InterfaceItemView: NSView {
         super.mouseUp(with: event)
         onAction?()
         enclosingMenuItem?.menu?.cancelTracking()
+    }
+
+    override func accessibilityLabel() -> String? {
+        "Network interface \(interfaceName), \(speedText)"
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        onAction?()
+        enclosingMenuItem?.menu?.cancelTracking()
+        return true
     }
 
     override func draw(_ dirtyRect: NSRect) {

@@ -2,11 +2,18 @@
 
 ## What's New
 
-- Adds a display setting to show B/s and KB/s speeds as rounded integers.
+- Adds configurable upload/download visibility and byte- or bit-based speed units.
+- Adds bounded session history, peak rates, transferred totals, and a traffic chart.
+- Adds friendly interface names, IPv4/IPv6 route detection, and clearer unavailable states.
+- Adds automatic update checks with stable and pre-release channels.
+- Reduces polling frequency in Low Power Mode and resets stale samples after wake.
 
 ## Fixes
 
-- Keeps MB/s and larger units at two decimal places when integer small-unit display is enabled.
+- Uses 64-bit interface counters and handles counter resets and invalid route messages safely.
+- Measures menu-bar text dynamically with monospaced fonts to avoid wrapping or truncation.
+- Verifies update archives with a pinned Ed25519 public key, SHA-256 digest, bundle metadata, code signing, and archive safety checks.
+- Restricts automatic replacement to applications installed directly in `/Applications` or `~/Applications`.
 
 ## Requirements
 

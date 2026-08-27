@@ -36,14 +36,31 @@ jobs:
 
     - name: Run Logic Tests
       run: |
-        xcrun swiftc NetSpeedMonitor/AppSettings.swift NetSpeedMonitor/UpdateValidation.swift Tests/main.swift -o build/swift-logic-tests
+        xcrun swiftc NetSpeedMonitor/AppSettings.swift NetSpeedMonitor/UpdateValidation.swift NetSpeedMonitor/ReleaseSignature.swift Tests/main.swift -o build/swift-logic-tests
         build/swift-logic-tests
+        xcrun swiftc NetSpeedMonitor/AppSettings.swift NetSpeedMonitor/UpdateValidation.swift NetSpeedMonitor/ReleaseSignature.swift NetSpeedMonitor/UpdateInstaller.swift Tests/UpdateInstallerTests.swift -o build/update-installer-tests
+        build/update-installer-tests
+        xcrun swiftc NetSpeedMonitor/AppSettings.swift NetSpeedMonitor/ReleaseProvider.swift Tests/ReleaseProviderTests.swift -o build/release-provider-tests
+        build/release-provider-tests
+        xcrun swiftc NetSpeedMonitor/RouteInterfaceResolver.swift Tests/RouteInterfaceResolverTests.swift -o build/route-resolver-tests
+        build/route-resolver-tests
+        xcrun swiftc NetSpeedMonitor/TrafficHistory.swift Tests/TrafficHistoryTests.swift -o build/traffic-history-tests
+        build/traffic-history-tests
+        xcrun swiftc NetSpeedMonitor/InterfaceNameResolver.swift Tests/InterfaceNameResolverTests.swift -o build/interface-name-tests
+        build/interface-name-tests
+        xcrun swiftc NetSpeedMonitor/MenuBarIconGenerator.swift Tests/MenuBarIconGeneratorTests.swift -o build/menu-bar-layout-tests
+        build/menu-bar-layout-tests
         xcrun clang++ -std=c++17 Tests/NetTrafficStatTests.cpp -o build/traffic-tests
         build/traffic-tests
+        xcrun clang++ -std=c++17 Tests/NetTrafficRuntimeTests.cpp NetSpeedMonitor/NetTrafficStatCpp.cpp -o build/traffic-runtime-tests
+        build/traffic-runtime-tests
 
     - name: Build with Xcode
       run: |
         VERSION=$(awk -F ' *= *' '/^MARKETING_VERSION/ { print $2 }' Version.xcconfig)
+        RELEASE_TAG="v${VERSION}"
+        if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then RELEASE_TAG="${GITHUB_REF_NAME}"; fi
+        echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
         xcodebuild \
           -project NetSpeedMonitor.xcodeproj \
           -scheme NetSpeedMonitor \
@@ -54,6 +71,7 @@ jobs:
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
+          NETSPEED_RELEASE_TAG="$RELEASE_TAG" \
           CONFIGURATION_BUILD_DIR=build/Release \
           clean build
 
@@ -98,6 +116,21 @@ jobs:
         COPYFILE_DISABLE=1 ditto -c -k --norsrc --keepParent NetSpeedMonitor.app NetSpeedMonitor.zip
         shasum -a 256 NetSpeedMonitor.zip > NetSpeedMonitor.sha256
 
+    - name: Sign Distribution Package
+      env:
+        RELEASE_SIGNING_PRIVATE_KEY_BASE64: ${{ secrets.RELEASE_SIGNING_PRIVATE_KEY_BASE64 }}
+      run: |
+        if [[ -z "$RELEASE_SIGNING_PRIVATE_KEY_BASE64" ]]; then
+          echo "::error::RELEASE_SIGNING_PRIVATE_KEY_BASE64 is not configured"
+          exit 1
+        fi
+        umask 077
+        KEY_FILE=$(mktemp)
+        trap 'rm -f "$KEY_FILE"' EXIT
+        printf '%s' "$RELEASE_SIGNING_PRIVATE_KEY_BASE64" > "$KEY_FILE"
+        xcrun swift scripts/sign-release.swift "$KEY_FILE" "$RELEASE_TAG" build/Release/NetSpeedMonitor.zip
+        xcrun swift scripts/verify-release.swift "$RELEASE_TAG" build/Release/NetSpeedMonitor.zip build/Release/NetSpeedMonitor.sig
+
     - name: Upload Artifacts (Master)
       if: github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v6
@@ -106,6 +139,7 @@ jobs:
         path: |
           build/Release/NetSpeedMonitor.zip
           build/Release/NetSpeedMonitor.sha256
+          build/Release/NetSpeedMonitor.sig
 
     - name: Create GitHub Release
       if: startsWith(github.ref, 'refs/tags/v')
@@ -117,5 +151,6 @@ jobs:
         files: |
           build/Release/NetSpeedMonitor.zip
           build/Release/NetSpeedMonitor.sha256
+          build/Release/NetSpeedMonitor.sig
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
