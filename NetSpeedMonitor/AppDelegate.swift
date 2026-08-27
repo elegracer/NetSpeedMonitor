@@ -46,7 +46,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var aboutWindow: NSWindow?
     private var settingsWindow: NSWindow?
     private var statisticsWindow: NSWindow?
+    private var statisticsSummaryLabel: NSTextField?
+    private var statisticsChart: TrafficChartView?
     private var updateChannelPopUp: NSPopUpButton?
+    private var updateChannelHelpLabel: NSTextField?
     private var integerSmallUnitsButton: NSButton?
     private var displayModePopUp: NSPopUpButton?
     private var unitModePopUp: NSPopUpButton?
@@ -278,6 +281,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 self.updateIcon(with: [:])
                 self.syncInterfaceMenu(with: [], speeds: [:], structuralChanges: !self.isMenuOpen)
+                self.refreshStatisticsWindow()
             }
             return
         }
@@ -314,6 +318,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let doStructure = !isMenuOpen
         updateIcon(with: speeds)
         syncInterfaceMenu(with: ifaces, speeds: speeds, structuralChanges: doStructure)
+        refreshStatisticsWindow()
     }
 
     // MARK: - Menu UI Updates
@@ -488,22 +493,78 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showSessionStatistics(_ sender: NSMenuItem) {
         menu.cancelTracking()
+        if let statisticsWindow {
+            refreshStatisticsWindow(force: true)
+            statisticsWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 320), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        window.title = "Session Statistics"
+        window.isReleasedWhenClosed = false
+        window.contentMinSize = NSSize(width: 440, height: 300)
+
+        let content = NSVisualEffectView(frame: window.contentView?.bounds ?? .zero)
+        content.material = .popover
+        content.blendingMode = .behindWindow
+        content.state = .active
+
+        let summaryLabel = NSTextField(wrappingLabelWithString: "")
+        summaryLabel.translatesAutoresizingMaskIntoConstraints = false
+        summaryLabel.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        summaryLabel.maximumNumberOfLines = 5
+        summaryLabel.lineBreakMode = .byWordWrapping
+
+        let legend = NSTextField(labelWithString: "● Download    ● Upload")
+        legend.translatesAutoresizingMaskIntoConstraints = false
+        let legendText = NSMutableAttributedString(string: legend.stringValue)
+        legendText.addAttribute(.foregroundColor, value: NSColor.systemCyan, range: NSRange(location: 0, length: 1))
+        if let uploadDot = legend.stringValue.range(of: "●", range: legend.stringValue.index(after: legend.stringValue.startIndex)..<legend.stringValue.endIndex) {
+            legendText.addAttribute(.foregroundColor, value: NSColor.systemPurple, range: NSRange(uploadDot, in: legend.stringValue))
+        }
+        legend.attributedStringValue = legendText
+
+        let chart = TrafficChartView(frame: .zero)
+        chart.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(summaryLabel)
+        content.addSubview(legend)
+        content.addSubview(chart)
+        NSLayoutConstraint.activate([
+            summaryLabel.topAnchor.constraint(equalTo: content.topAnchor, constant: 18),
+            summaryLabel.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
+            summaryLabel.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
+            legend.topAnchor.constraint(equalTo: summaryLabel.bottomAnchor, constant: 10),
+            legend.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
+            chart.topAnchor.constraint(equalTo: legend.bottomAnchor, constant: 8),
+            chart.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
+            chart.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
+            chart.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -20),
+            chart.heightAnchor.constraint(greaterThanOrEqualToConstant: 130),
+        ])
+        window.contentView = content
+        statisticsWindow = window
+        statisticsSummaryLabel = summaryLabel
+        statisticsChart = chart
+        refreshStatisticsWindow(force: true)
+        window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func refreshStatisticsWindow(force: Bool = false) {
+        guard force || statisticsWindow?.isVisible == true else { return }
         let summary = trafficHistory.summary
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
-        let route = activeAutoInterfaceName.map(InterfaceNameResolver.displayName) ?? "Unavailable"
-        let window = statisticsWindow ?? NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 260), styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Session Statistics"
-        window.isReleasedWhenClosed = false
-        let content = NSView(frame: window.contentView?.bounds ?? .zero)
-        let summaryLabel = NSTextField(wrappingLabelWithString: "Route: \(route)  •  Interval: \(timer?.timeInterval ?? 0)s\nDownloaded \(formatter.string(fromByteCount: Int64(summary.sessionDownloadBytes)))  •  Uploaded \(formatter.string(fromByteCount: Int64(summary.sessionUploadBytes)))\nPeak ↓ \(formattedSpeed(summary.peakDownload))  •  Peak ↑ \(formattedSpeed(summary.peakUpload))")
-        summaryLabel.frame = NSRect(x: 20, y: 184, width: 420, height: 56)
-        let chart = TrafficChartView(frame: NSRect(x: 20, y: 34, width: 420, height: 136))
-        chart.samples = trafficHistory.samples
-        content.addSubview(summaryLabel); content.addSubview(chart)
-        window.contentView = content
-        statisticsWindow = window
-        window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        let route: String
+        if isAutoMode {
+            route = activeAutoInterfaceName.map(InterfaceNameResolver.displayName) ?? "Unavailable"
+        } else {
+            let name = InterfaceNameResolver.displayName(forBSDName: selectedInterfaceName)
+            route = latestSpeeds[selectedInterfaceName] == nil ? "\(name) (Unavailable)" : name
+        }
+        let interval = timer?.timeInterval ?? TimeInterval(updateInterval)
+        statisticsSummaryLabel?.stringValue = "Current interface: \(route)    Sample interval: \(String(format: "%.0f", interval)) s\nSession transferred: ↓ \(formatter.string(fromByteCount: Int64(summary.sessionDownloadBytes)))    ↑ \(formatter.string(fromByteCount: Int64(summary.sessionUploadBytes)))\nSession average: ↓ \(formattedSpeed(summary.averageDownload))    ↑ \(formattedSpeed(summary.averageUpload))\nSession peak: ↓ \(formattedSpeed(summary.peakDownload))    ↑ \(formattedSpeed(summary.peakUpload))"
+        statisticsChart?.samples = trafficHistory.samples
     }
 
     @objc private func quitApp(_ sender: NSMenuItem) {
@@ -541,7 +602,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 330),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -580,7 +641,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contentView.addSubview(popUp)
         updateChannelPopUp = popUp
 
-        let displayLabel = NSTextField(labelWithString: "Display")
+        let displayLabel = NSTextField(labelWithString: "Menu Bar Display")
         displayLabel.translatesAutoresizingMaskIntoConstraints = false
         displayLabel.font = NSFont.boldSystemFont(ofSize: 13)
         contentView.addSubview(displayLabel)
@@ -598,6 +659,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contentView.addSubview(modePopUp)
         displayModePopUp = modePopUp
 
+        let modeLabel = NSTextField(labelWithString: "Traffic:")
+        modeLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(modeLabel)
+
         let unitPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
         unitPopUp.translatesAutoresizingMaskIntoConstraints = false
         unitPopUp.target = self
@@ -606,12 +671,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contentView.addSubview(unitPopUp)
         unitModePopUp = unitPopUp
 
-        let helpLabel = NSTextField(labelWithString: "Default is Release Only. Choose pre-releases only when you want to test builds before they become official.")
+        let unitLabel = NSTextField(labelWithString: "Units:")
+        unitLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(unitLabel)
+
+        let helpLabel = NSTextField(wrappingLabelWithString: "")
         helpLabel.translatesAutoresizingMaskIntoConstraints = false
-        helpLabel.maximumNumberOfLines = 3
+        helpLabel.maximumNumberOfLines = 2
         helpLabel.lineBreakMode = .byWordWrapping
         helpLabel.textColor = .secondaryLabelColor
         contentView.addSubview(helpLabel)
+        updateChannelHelpLabel = helpLabel
 
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
@@ -619,24 +689,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
             channelLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 18),
             channelLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            channelLabel.widthAnchor.constraint(equalToConstant: 92),
             popUp.centerYAnchor.constraint(equalTo: channelLabel.centerYAnchor),
             popUp.leadingAnchor.constraint(equalTo: channelLabel.trailingAnchor, constant: 12),
             popUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            displayLabel.topAnchor.constraint(equalTo: channelLabel.bottomAnchor, constant: 22),
-            displayLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
-            displayLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            integerButton.topAnchor.constraint(equalTo: displayLabel.bottomAnchor, constant: 10),
-            integerButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
-            integerButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            modePopUp.topAnchor.constraint(equalTo: integerButton.bottomAnchor, constant: 12),
-            modePopUp.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
-            modePopUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            unitPopUp.topAnchor.constraint(equalTo: modePopUp.bottomAnchor, constant: 8),
-            unitPopUp.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
-            unitPopUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            helpLabel.topAnchor.constraint(equalTo: unitPopUp.bottomAnchor, constant: 14),
+            helpLabel.topAnchor.constraint(equalTo: popUp.bottomAnchor, constant: 8),
             helpLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
             helpLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            displayLabel.topAnchor.constraint(equalTo: helpLabel.bottomAnchor, constant: 22),
+            displayLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            displayLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            modeLabel.topAnchor.constraint(equalTo: displayLabel.bottomAnchor, constant: 12),
+            modeLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            modeLabel.widthAnchor.constraint(equalToConstant: 92),
+            modePopUp.centerYAnchor.constraint(equalTo: modeLabel.centerYAnchor),
+            modePopUp.leadingAnchor.constraint(equalTo: modeLabel.trailingAnchor, constant: 12),
+            modePopUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            unitLabel.topAnchor.constraint(equalTo: modeLabel.bottomAnchor, constant: 14),
+            unitLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            unitLabel.widthAnchor.constraint(equalTo: modeLabel.widthAnchor),
+            unitPopUp.centerYAnchor.constraint(equalTo: unitLabel.centerYAnchor),
+            unitPopUp.leadingAnchor.constraint(equalTo: unitLabel.trailingAnchor, constant: 12),
+            unitPopUp.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            integerButton.topAnchor.constraint(equalTo: unitLabel.bottomAnchor, constant: 16),
+            integerButton.leadingAnchor.constraint(equalTo: modePopUp.leadingAnchor),
+            integerButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            integerButton.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -18),
         ])
 
         settingsWindow = window
@@ -649,6 +727,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func updateChannelChanged(_ sender: NSPopUpButton) {
         guard let rawValue = sender.selectedItem?.representedObject as? String else { return }
         updateChannel = AppSettings.normalizedUpdateChannel(rawValue)
+        syncSettingsControls()
     }
 
     @objc private func integerSmallUnitsChanged(_ sender: NSButton) {
@@ -672,6 +751,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         integerSmallUnitsButton?.state = integerSmallUnits ? .on : .off
         displayModePopUp?.selectItem(withTitle: displayMode.title)
         unitModePopUp?.selectItem(withTitle: unitMode.title)
+        updateChannelHelpLabel?.stringValue = updateChannel.description
     }
 
     @objc private func showAbout(_ sender: NSMenuItem) {
@@ -682,11 +762,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let version = appVersion
+        let releaseTag = Bundle.main.object(forInfoDictionaryKey: "NetSpeedMonitorReleaseTag") as? String
+        let version = AppSettings.displayVersion(marketingVersion: appVersion, releaseTag: releaseTag)
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         let repo = githubRepo
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 320, height: 140),
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 170),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -712,7 +794,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         titleLabel.isSelectable = true
         contentView.addSubview(titleLabel)
 
-        let versionLabel = NSTextField(labelWithString: "Version \(version)")
+        let buildSuffix = build.map { " (Build \($0))" } ?? ""
+        let versionLabel = NSTextField(labelWithString: "Version \(version)\(buildSuffix)")
         versionLabel.translatesAutoresizingMaskIntoConstraints = false
         versionLabel.alignment = .center
         versionLabel.isSelectable = true
@@ -753,6 +836,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             authorLabel.topAnchor.constraint(equalTo: linkLabel.bottomAnchor, constant: 6),
             authorLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
             authorLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
+            authorLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -18),
         ])
 
         aboutWindow = window

@@ -95,6 +95,15 @@ enum AppSettings {
         version(fromReleaseTag: tag)?.split(separator: "-", maxSplits: 1).first.map(String.init)
     }
 
+    static func displayVersion(marketingVersion: String, releaseTag: String?) -> String {
+        guard let releaseTag,
+              let taggedVersion = version(fromReleaseTag: releaseTag),
+              appVersion(fromReleaseTag: releaseTag) == marketingVersion else {
+            return marketingVersion
+        }
+        return taggedVersion
+    }
+
     static func isPrereleaseTag(_ tag: String) -> Bool {
         version(fromReleaseTag: tag)?.contains("-") == true
     }

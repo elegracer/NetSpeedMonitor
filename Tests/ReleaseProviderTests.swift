@@ -20,7 +20,7 @@ final class MockURLProtocol: URLProtocol {
 
 func releaseJSON() -> Data {
     let digest = "sha256:" + String(repeating: "a", count: 64)
-    return Data("[{\"tag_name\":\"v1.2-beta.1\",\"prerelease\":true,\"draft\":false,\"assets\":[{\"name\":\"NetSpeedMonitor.zip\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.2-beta.1/NetSpeedMonitor.zip\",\"digest\":\"\(digest)\"},{\"name\":\"NetSpeedMonitor.sig\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.2-beta.1/NetSpeedMonitor.sig\",\"digest\":null}]},{\"tag_name\":\"v1.1\",\"prerelease\":false,\"draft\":false,\"assets\":[{\"name\":\"NetSpeedMonitor.zip\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.1/NetSpeedMonitor.zip\",\"digest\":\"\(digest)\"},{\"name\":\"NetSpeedMonitor.sig\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.1/NetSpeedMonitor.sig\",\"digest\":null}]}]".utf8)
+    return Data("[{\"tag_name\":\"v1.2-beta.1\",\"prerelease\":true,\"draft\":false,\"assets\":[{\"name\":\"NetSpeedMonitor.zip\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.2-beta.1/NetSpeedMonitor.zip\",\"digest\":\"\(digest)\"},{\"name\":\"NetSpeedMonitor.sig\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.2-beta.1/NetSpeedMonitor.sig\",\"digest\":null}]},{\"tag_name\":\"v1.2-beta.2\",\"prerelease\":true,\"draft\":false,\"assets\":[{\"name\":\"NetSpeedMonitor.zip\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.2-beta.2/NetSpeedMonitor.zip\",\"digest\":\"\(digest)\"},{\"name\":\"NetSpeedMonitor.sig\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.2-beta.2/NetSpeedMonitor.sig\",\"digest\":null}]},{\"tag_name\":\"v1.1\",\"prerelease\":false,\"draft\":false,\"assets\":[{\"name\":\"NetSpeedMonitor.zip\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.1/NetSpeedMonitor.zip\",\"digest\":\"\(digest)\"},{\"name\":\"NetSpeedMonitor.sig\",\"browser_download_url\":\"https://github.com/a/b/releases/download/v1.1/NetSpeedMonitor.sig\",\"digest\":null}]}]".utf8)
 }
 
 func fetch(_ provider: ReleaseProvider, includePrereleases: Bool) -> Result<ReleaseDescriptor, Error> {
@@ -47,7 +47,7 @@ struct ReleaseProviderTests {
             return (response, releaseJSON())
         }
         guard case .success(let stable) = fetch(provider, includePrereleases: false), stable.tag == "v1.1" else { fatalError("stable filtering failed") }
-        guard case .success(let preview) = fetch(provider, includePrereleases: true), preview.tag == "v1.2-beta.1" else { fatalError("prerelease selection failed") }
+        guard case .success(let preview) = fetch(provider, includePrereleases: true), preview.tag == "v1.2-beta.2" else { fatalError("newest prerelease selection failed") }
 
         MockURLProtocol.handler = { request in
             precondition(request.value(forHTTPHeaderField: "If-None-Match") == "test-etag")

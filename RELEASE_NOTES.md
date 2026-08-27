@@ -2,6 +2,8 @@
 
 ## What's New
 
+- Improves the Statistics and Settings layouts with clearer labels and responsive sizing.
+- Keeps the Statistics window live while traffic samples continue to arrive and adds session averages.
 - Adds configurable upload/download visibility and byte- or bit-based speed units.
 - Adds bounded session history, peak rates, transferred totals, and a traffic chart.
 - Adds friendly interface names, IPv4/IPv6 route detection, and clearer unavailable states.
@@ -10,6 +12,8 @@
 
 ## Fixes
 
+- Shows the complete pre-release version, such as `1.21-beta.2`, in About.
+- Uses one shared chart scale so upload and download rates can be compared visually.
 - Uses 64-bit interface counters and handles counter resets and invalid route messages safely.
 - Measures menu-bar text dynamically with monospaced fonts to avoid wrapping or truncation.
 - Verifies update archives with a pinned Ed25519 public key, SHA-256 digest, bundle metadata, code signing, and archive safety checks.
