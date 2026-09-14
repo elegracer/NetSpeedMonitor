@@ -79,6 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         buildMenu()
         updateAutoLaunchStateFromSystem()
+        activeAutoInterfaceName = RouteInterfaceResolver.currentDefaultInterface()
         updateInterfaceCheckmarks()
         startRouteMonitoring()
         startTimer()
@@ -247,9 +248,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         routeMonitor = monitor
     }
 
-    private func startTimer() {
+    private var effectiveUpdateInterval: TimeInterval {
         let configured = TimeInterval(updateInterval)
-        let interval = ProcessInfo.processInfo.isLowPowerModeEnabled ? max(5, configured) : configured
+        return ProcessInfo.processInfo.isLowPowerModeEnabled ? max(5, configured) : configured
+    }
+
+    private func startTimer() {
+        let interval = effectiveUpdateInterval
         let timer = Timer.scheduledTimer(timeInterval: interval, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
         RunLoop.current.add(timer, forMode: .common)
         self.timer = timer
@@ -287,7 +292,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         var speeds: [String: (down: Double, up: Double, isUp: Bool)] = [:]
-        let maximumSampleAge = AppSettings.maximumSampleAge(for: updateInterval)
+        let maximumSampleAge = AppSettings.maximumSampleAge(for: Int(effectiveUpdateInterval.rounded(.up)))
 
         for (key, val) in statMap {
             guard let name = key as? String,
