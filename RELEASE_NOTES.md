@@ -12,6 +12,8 @@
 
 ## Fixes
 
+- Shows correct speeds in Low Power Mode instead of zeroing out all samples.
+- Binds the speed display to the active default interface immediately on launch.
 - Shows the complete pre-release version, such as `1.21-beta.2`, in About.
 - Uses one shared chart scale so upload and download rates can be compared visually.
 - Uses 64-bit interface counters and handles counter resets and invalid route messages safely.
