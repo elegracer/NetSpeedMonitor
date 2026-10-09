@@ -41,6 +41,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var timer: Timer?
     private let netTrafficStat = NetTrafficStatReceiver()
+    private lazy var networkStatistics = NetworkStatisticsTrafficSource()
     private let trafficHistory = TrafficHistory()
 
     private var aboutWindow: NSWindow?
@@ -59,6 +60,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var isMenuOpen: Bool = false
     private var latestSpeeds: [String: (down: Double, up: Double, isUp: Bool)] = [:]
+    private var trafficSampleGeneration = 0
 
     private var activeAutoInterfaceName: String?
     private var routeMonitor: NWPathMonitor?
@@ -79,7 +81,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         buildMenu()
         updateAutoLaunchStateFromSystem()
-        activeAutoInterfaceName = RouteInterfaceResolver.currentDefaultInterface()
+        refreshActiveAutoInterface()
+        logger.info("NetworkStatistics route source available: \(self.networkStatistics.isAvailable)")
         updateInterfaceCheckmarks()
         startRouteMonitoring()
         startTimer()
@@ -234,18 +237,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.pathUpdateHandler = { [weak self] path in
             guard let self else { return }
             DispatchQueue.main.async {
-                let interfaceName = RouteInterfaceResolver.currentDefaultInterface()
-                    ?? path.availableInterfaces.first(where: { path.usesInterfaceType($0.type) })?.name
-                if self.activeAutoInterfaceName != interfaceName {
-                    self.activeAutoInterfaceName = interfaceName
-                    logger.info("Effective route interface: \(interfaceName ?? "unavailable", privacy: .public)")
-                    self.updateInterfaceCheckmarks()
-                    self.renderLatestSpeeds()
-                }
+                let fallback = path.availableInterfaces.first(where: { path.usesInterfaceType($0.type) })?.name
+                self.refreshActiveAutoInterface(fallback: fallback)
             }
         }
         monitor.start(queue: DispatchQueue(label: "com.elegracer.NetSpeedMonitor.route"))
         routeMonitor = monitor
+    }
+
+    private func refreshActiveAutoInterface(fallback: String? = nil) {
+        let interfaceName = RouteInterfaceResolver.currentDefaultInterface() ?? fallback
+        guard activeAutoInterfaceName != interfaceName else { return }
+        activeAutoInterfaceName = interfaceName
+        logger.info("Effective route interface: \(interfaceName ?? "unavailable", privacy: .public)")
+        updateInterfaceCheckmarks()
+        renderLatestSpeeds()
     }
 
     private var effectiveUpdateInterval: TimeInterval {
@@ -268,6 +274,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
             self.netTrafficStat.reset()
+            self.networkStatistics.reset()
             self.trafficHistory.reset()
             self.tick()
         }
@@ -280,41 +287,59 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func tick() {
-        guard let statMap = netTrafficStat.getNetTrafficStatMap() else {
-            latestSpeeds = [:]
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.updateIcon(with: [:])
-                self.syncInterfaceMenu(with: [], speeds: [:], structuralChanges: !self.isMenuOpen)
-                self.refreshStatisticsWindow()
-            }
-            return
-        }
-
+        refreshActiveAutoInterface()
         var speeds: [String: (down: Double, up: Double, isUp: Bool)] = [:]
         let maximumSampleAge = AppSettings.maximumSampleAge(for: Int(effectiveUpdateInterval.rounded(.up)))
 
-        for (key, val) in statMap {
-            guard let name = key as? String,
-                  let s = val as? NetTrafficStatOC else { continue }
-            let isFreshSample = s.delta_ts_sec.doubleValue <= maximumSampleAge
-            let down = isFreshSample ? s.ibytes_per_sec.doubleValue : 0
-            let up = isFreshSample ? s.obytes_per_sec.doubleValue : 0
-            let isUp = s.isUp
-            let hasTraffic = s.total_ibytes > 0 || s.total_obytes > 0
-                || s.delta_ibytes > 0 || s.delta_obytes > 0
-                || down > 0 || up > 0
-            if isUp || hasTraffic {
-                speeds[name] = (down, up, isUp)
+        if let statMap = netTrafficStat.getNetTrafficStatMap() {
+            for (key, val) in statMap {
+                guard let name = key as? String,
+                      let s = val as? NetTrafficStatOC else { continue }
+                let isFreshSample = s.delta_ts_sec.doubleValue <= maximumSampleAge
+                let down = isFreshSample ? s.ibytes_per_sec.doubleValue : 0
+                let up = isFreshSample ? s.obytes_per_sec.doubleValue : 0
+                let isUp = s.isUp
+                let hasTraffic = s.total_ibytes > 0 || s.total_obytes > 0
+                    || s.delta_ibytes > 0 || s.delta_obytes > 0
+                    || down > 0 || up > 0
+                if isUp || hasTraffic {
+                    speeds[name] = (down, up, isUp)
+                }
             }
         }
 
         latestSpeeds = speeds
+        trafficSampleGeneration += 1
+        let generation = trafficSampleGeneration
+        guard networkStatistics.isAvailable else {
+            publishTrafficSample(speeds, generation: generation)
+            return
+        }
+        networkStatistics.requestUpdate { [weak self] rates in
+            DispatchQueue.main.async {
+                guard let self, generation == self.trafficSampleGeneration else { return }
+                var mergedSpeeds = speeds
+                for (name, rate) in rates ?? [:] {
+                    mergedSpeeds[name] = (
+                        rate.downloadBytesPerSecond,
+                        rate.uploadBytesPerSecond,
+                        mergedSpeeds[name]?.isUp ?? true
+                    )
+                }
+                self.publishTrafficSample(mergedSpeeds, generation: generation)
+            }
+        }
+    }
+
+    private func publishTrafficSample(
+        _ speeds: [String: (down: Double, up: Double, isUp: Bool)],
+        generation: Int
+    ) {
+        guard generation == trafficSampleGeneration else { return }
+        latestSpeeds = speeds
         let displayed = displayedSpeed(from: speeds)
         trafficHistory.append(download: displayed.down, upload: displayed.up)
-        let activeIfaces = speeds.keys.sorted()
-
-        renderLatestSpeeds(activeIfaces: activeIfaces)
+        renderLatestSpeeds(activeIfaces: speeds.keys.sorted())
     }
 
     private func renderLatestSpeeds(activeIfaces: [String]? = nil) {
@@ -578,6 +603,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         stopTimer()
+        networkStatistics.stop()
         routeMonitor?.cancel()
         routeMonitor = nil
         if let powerObserver { NotificationCenter.default.removeObserver(powerObserver) }

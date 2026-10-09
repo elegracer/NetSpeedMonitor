@@ -1,6 +1,6 @@
 # NetSpeedMonitor
 
-NetSpeedMonitor is a minimal menu bar app for macOS 26 and later. It reads per-interface byte counters with `sysctl` and displays current upload and download rates.
+NetSpeedMonitor is a minimal menu bar app for macOS 26 and later. It reads per-interface route counters directly from NetworkStatistics, falls back to BSD interface counters when needed, and displays current upload and download rates.
 
 ## Features
 
@@ -34,7 +34,7 @@ Automatic installation is supported when the app is located directly in `/Applic
 Official update archives are signed with an Ed25519 private key. The matching public key is pinned in the application and in `scripts/verify-release.swift`; the updater rejects releases without a valid `NetSpeedMonitor.sig`. To verify an official archive independently:
 
 ```bash
-xcrun swift scripts/verify-release.swift v1.21 NetSpeedMonitor.zip NetSpeedMonitor.sig
+xcrun swift scripts/verify-release.swift v1.22 NetSpeedMonitor.zip NetSpeedMonitor.sig
 ```
 
 The release private key is stored outside the repository and in the `RELEASE_SIGNING_PRIVATE_KEY_BASE64` GitHub Actions secret. GitHub secrets are write-only: their plaintext cannot be downloaded later. Maintainers must keep a separate encrypted backup. To rotate the key, first ship a release signed by the old key that trusts both old and new public keys, then sign later releases with the new key.
@@ -43,9 +43,11 @@ For local signing, keep the Base64-encoded 32-byte private key at `~/.config/Net
 
 ## VPN Behavior
 
-Automatic mode asks the macOS Network framework which interface carries traffic to a public IPv4 endpoint. This follows full-tunnel and route-based VPN changes without polling. Split-tunnel VPNs can route different destinations over different interfaces, so no single interface can represent every flow.
+Automatic mode resolves which interface carries traffic to a public IPv4 endpoint on every refresh and also reacts to macOS Network path changes. This makes the selected interface follow VPN connect, disconnect, and mode changes without restarting the app.
 
-Per-process traffic monitoring is intentionally not included because continuously running `nettop` has significantly higher CPU overhead.
+Traffic rates come from direct NetworkStatistics route queries. Active IPv4 and IPv6 route sources are aggregated by interface while duplicate dynamic route clones are excluded, including full-tunnel VPNs that represent the default path as multiple route prefixes. If NetworkStatistics is unavailable, the app uses BSD interface counters as a fallback. Split-tunnel VPNs can route different destinations over different interfaces, so automatic mode follows the public probe route while the interface submenu continues to expose the other active interfaces.
+
+The app does not launch or continuously run `nettop`; that approach has significantly higher CPU overhead.
 
 ## Screenshot
 

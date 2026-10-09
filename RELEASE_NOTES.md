@@ -2,6 +2,8 @@
 
 ## What's New
 
+- Reads traffic rates directly from NetworkStatistics route counters, with BSD interface counters as a fallback.
+- Follows VPN route changes on every refresh while preserving the configured 1-second sampling interval.
 - Improves the Statistics and Settings layouts with clearer labels and responsive sizing.
 - Keeps the Statistics window live while traffic samples continue to arrive and adds session averages.
 - Adds configurable upload/download visibility and byte- or bit-based speed units.
@@ -12,6 +14,7 @@
 
 ## Fixes
 
+- Prunes non-IP and cloned route sources to reduce NetworkStatistics polling overhead.
 - Shows correct speeds in Low Power Mode instead of zeroing out all samples.
 - Binds the speed display to the active default interface immediately on launch.
 - Shows the complete pre-release version, such as `1.21-beta.2`, in About.

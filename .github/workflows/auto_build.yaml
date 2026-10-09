@@ -48,6 +48,8 @@ jobs:
         build/traffic-history-tests
         xcrun swiftc NetSpeedMonitor/InterfaceNameResolver.swift Tests/InterfaceNameResolverTests.swift -o build/interface-name-tests
         build/interface-name-tests
+        xcrun swiftc NetSpeedMonitor/NetworkStatisticsTrafficSource.swift Tests/NetworkStatisticsTrafficSourceTests.swift -o build/network-statistics-tests
+        build/network-statistics-tests
         xcrun swiftc NetSpeedMonitor/MenuBarIconGenerator.swift Tests/MenuBarIconGeneratorTests.swift -o build/menu-bar-layout-tests
         build/menu-bar-layout-tests
         xcrun clang++ -std=c++17 Tests/NetTrafficStatTests.cpp -o build/traffic-tests
