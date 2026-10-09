@@ -73,11 +73,6 @@ final class UpdateController: NSObject {
 
     private func checkReleases(includePrereleases: Bool) {
         guard let sessionID else { return }
-        if let retry = releaseProvider.retryAfter(repo: githubRepo), retry > Date() {
-            if silentCheck { resetSession(closeWindow: false) }
-            else { showFailure("GitHub rate limit reached. Try again after \(retry.formatted()).") }
-            return
-        }
         checkTask = releaseProvider.fetch(repo: githubRepo, includePrereleases: includePrereleases, userAgent: "NetSpeedMonitor/\(appVersion)") { [weak self] result in
             DispatchQueue.main.async {
                 guard let self, self.sessionID == sessionID else { return }
@@ -122,6 +117,36 @@ final class UpdateController: NSObject {
         showWindow(title: "Downloading Update", message: "Downloading update... 0%", progress: 0)
         setButtons(primaryTitle: nil, primaryAction: nil, secondaryTitle: nil, secondaryAction: nil)
 
+        var checksumRequest = URLRequest(url: release.checksumURL)
+        checksumRequest.timeoutInterval = 15
+        let checksumTask = URLSession.shared.dataTask(with: checksumRequest) { [weak self] checksumData, checksumResponse, checksumError in
+            guard let self else { return }
+            guard checksumError == nil,
+                  let checksumResponse = checksumResponse as? HTTPURLResponse,
+                  (200...299).contains(checksumResponse.statusCode),
+                  let checksumData, checksumData.count <= 1024,
+                  let checksumText = String(data: checksumData, encoding: .utf8),
+                  let expectedSHA256 = UpdateValidation.expectedSHA256(digest: nil, checksumText: checksumText) else {
+                self.onMain(sessionID) { $0.showFailure("Could not download a valid release checksum.") }
+                return
+            }
+            self.onMain(sessionID) {
+                $0.fetchSignature(
+                    release: release,
+                    expectedDigest: "sha256:\(expectedSHA256)",
+                    sessionID: sessionID
+                )
+            }
+        }
+        checkTask = checksumTask
+        checksumTask.resume()
+    }
+
+    private func fetchSignature(
+        release: ReleaseDescriptor,
+        expectedDigest: String,
+        sessionID: UUID
+    ) {
         var signatureRequest = URLRequest(url: release.signatureURL)
         signatureRequest.timeoutInterval = 15
         let signatureTask = URLSession.shared.dataTask(with: signatureRequest) { [weak self] signatureData, signatureResponse, signatureError in
@@ -134,13 +159,25 @@ final class UpdateController: NSObject {
                 self.onMain(sessionID) { $0.showFailure("Could not download a valid release signature.") }
                 return
             }
-            self.download(release: release, signatureBase64: signatureBase64, sessionID: sessionID)
+            self.onMain(sessionID) {
+                $0.download(
+                    release: release,
+                    expectedDigest: expectedDigest,
+                    signatureBase64: signatureBase64,
+                    sessionID: sessionID
+                )
+            }
         }
         checkTask = signatureTask
         signatureTask.resume()
     }
 
-    private func download(release: ReleaseDescriptor, signatureBase64: String, sessionID: UUID) {
+    private func download(
+        release: ReleaseDescriptor,
+        expectedDigest: String,
+        signatureBase64: String,
+        sessionID: UUID
+    ) {
         let task = URLSession.shared.downloadTask(with: release.downloadURL) { [weak self] tempURL, response, error in
             guard let self else { return }
             if let error {
@@ -180,7 +217,7 @@ final class UpdateController: NSObject {
                     try self.installer.prepare(
                         downloadedZip: stableZip,
                         workDirectory: workDirectory,
-                        expectedDigest: release.digest,
+                        expectedDigest: expectedDigest,
                         signatureBase64: signatureBase64,
                         targetReleaseTag: release.tag
                     )

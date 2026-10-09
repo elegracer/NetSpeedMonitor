@@ -15,6 +15,11 @@ if [[ -z "$version" || -z "$build" || -z "$minimum_macos" ]]; then
   exit 1
 fi
 
+if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "MARKETING_VERSION must use MAJOR.MINOR.PATCH format" >&2
+  exit 1
+fi
+
 if [[ "${1:-}" == "tag" ]]; then
   tag=${2:-}
   if [[ "$tag" != "v${version}" && "$tag" != "v${version}-"* ]]; then

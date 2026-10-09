@@ -29,12 +29,16 @@ sudo xattr -rd com.apple.quarantine /Applications/NetSpeedMonitor.app
 To upgrade, choose **Check Update** from the NetSpeedMonitor menu. If the in-app updater cannot run, quit NetSpeedMonitor and replace the existing app in `/Applications` manually.
 Automatic installation is supported when the app is located directly in `/Applications` or `~/Applications`.
 
+## Versioning
+
+Releases use `MAJOR.MINOR.PATCH`. Increment `MAJOR` for incompatible changes, `MINOR` for new features, and `PATCH` by default for fixes and maintenance changes.
+
 ## Release signing
 
 Official update archives are signed with an Ed25519 private key. The matching public key is pinned in the application and in `scripts/verify-release.swift`; the updater rejects releases without a valid `NetSpeedMonitor.sig`. To verify an official archive independently:
 
 ```bash
-xcrun swift scripts/verify-release.swift v1.22 NetSpeedMonitor.zip NetSpeedMonitor.sig
+xcrun swift scripts/verify-release.swift v1.22.1 NetSpeedMonitor.zip NetSpeedMonitor.sig
 ```
 
 The release private key is stored outside the repository and in the `RELEASE_SIGNING_PRIVATE_KEY_BASE64` GitHub Actions secret. GitHub secrets are write-only: their plaintext cannot be downloaded later. Maintainers must keep a separate encrypted backup. To rotate the key, first ship a release signed by the old key that trusts both old and new public keys, then sign later releases with the new key.

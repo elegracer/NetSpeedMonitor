@@ -29,6 +29,8 @@ expect(AppSettings.compareVersions("v1.21-beta.2", "v1.21-beta.1") == .orderedDe
 expect(AppSettings.compareVersions("v1.21-beta.2", "v1.21-beta.2") == .orderedSame, "same prerelease comparison")
 expect(AppSettings.compareVersions("v1.21-beta.2", "v1.21") == .orderedAscending, "stable release follows beta2")
 expect(AppSettings.compareVersions("v1.21", "v1.21-beta.2") == .orderedDescending, "stable release is newer than beta2")
+expect(AppSettings.compareVersions("v1.22", "v1.22.1") == .orderedAscending, "patch release follows two-part legacy version")
+expect(AppSettings.newestReleaseTag(from: ["v1.22", "v1.22.1"], includePrereleases: false) == "v1.22.1", "patch release selected over legacy version")
 expect(AppSettings.newestReleaseTag(from: ["v1.21-beta.1", "v1.21-beta.2", "v1.20"], includePrereleases: true) == "v1.21-beta.2", "beta2 selected over beta1 and older stable")
 expect(AppSettings.compareVersions("v1.21-rc.1", "v1.21") == .orderedAscending, "stable release follows prerelease")
 expect(AppSettings.compareVersions("1.21", "1.21.0") == .orderedSame, "missing core components compare as zero")

@@ -2,6 +2,8 @@
 
 ## What's New
 
+- Uses three-part `MAJOR.MINOR.PATCH` release versions, with patch increments for fixes and maintenance.
+- Checks stable releases through GitHub redirects and pre-releases through the Atom feed without using the rate-limited REST API.
 - Reads traffic rates directly from NetworkStatistics route counters, with BSD interface counters as a fallback.
 - Follows VPN route changes on every refresh while preserving the configured 1-second sampling interval.
 - Improves the Statistics and Settings layouts with clearer labels and responsive sizing.
@@ -14,6 +16,8 @@
 
 ## Fixes
 
+- Downloads the published SHA-256 checksum before verifying the signed update archive.
+- Prevents shared GitHub API quotas from blocking update checks.
 - Prunes non-IP and cloned route sources to reduce NetworkStatistics polling overhead.
 - Shows correct speeds in Low Power Mode instead of zeroing out all samples.
 - Binds the speed display to the active default interface immediately on launch.
